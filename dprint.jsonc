@@ -1,0 +1,54 @@
+// Copyright (C) 2025 Shota FUJI
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+{
+	"excludes": [".zig-cache", "zig-out"],
+	"plugins": [
+		"https://plugins.dprint.dev/markdown-0.19.0.wasm",
+		"https://plugins.dprint.dev/toml-0.7.0.wasm",
+		"https://plugins.dprint.dev/json-0.20.0.wasm",
+		"https://plugins.dprint.dev/exec-0.5.1.json@492414e39dea4dccc07b4af796d2f4efdb89e84bae2bd4e1e924c0cc050855bf",
+	],
+
+	// Common options
+	"lineWidth": 90,
+	"indentWidth": 2,
+	"newLineKind": "lf",
+	"useTabs": true,
+
+	// Plugins
+	"markdown": {},
+	"toml": {},
+	"json": {},
+	"exec": {
+		"cwd": "${configDir}",
+		"commands": [
+			{
+				"exts": ["zig"],
+				"command": "zig fmt --stdin",
+			},
+			{
+				"exts": ["zon"],
+				"command": "zig fmt --zon --stdin",
+			},
+			{
+				"exts": ["nix"],
+				"command": "nixfmt --strict --width={{line_width}} --indent={{indent_width}}",
+			},
+		],
+	},
+}

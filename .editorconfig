@@ -15,12 +15,19 @@
 #
 # SPDX-License-Identifier: GPL-3.0-only
 
-# Zig's build cache directory.
-.zig-cache
+[*]
+indent_style = tab
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
 
-# Zig compiler emits build artifacts under this directory.
-zig-out
+[*.{zig,zon}]
+# Zig compiler can't handle tab character
+indent_style = space
+indent_size = 4
 
-# Nix creates this super generic name directory on build.
-# They seems to have no way to change the name or suppress the creation.
-/result
+[*.nix]
+# Nix's string interpolation does not work well with tab character
+indent_style = space
+indent_size = 2

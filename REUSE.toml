@@ -2,14 +2,11 @@ version = 1
 
 [[annotations]]
 path = [
-	".gitignore",
 	"examples.txt",
-	"makefile",
-	"print.c",
-	"print.h",
-	"README.md",
-	"sunwait.c",
-	"sunwait.h",
+	"src/print.c",
+	"src/print.h",
+	"src/sunwait.c",
+	"src/sunwait.h",
 	"USAGE.txt",
 ]
 SPDX-FileCopyrightText = [
@@ -19,7 +16,7 @@ SPDX-FileCopyrightText = [
 SPDX-License-Identifier = "GPL-3.0-only"
 
 [[annotations]]
-path = ["sunriset.c", "sunriset.h"]
+path = ["src/sunriset.c", "src/sunriset.h"]
 SPDX-FileCopyrightText = [
 	"(c) Paul Schlyter, 1989, 1992",
 	"(c) 2000,2004,2022 Daniel Risacher",
