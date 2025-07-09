@@ -20,6 +20,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const man_opt = b.option(bool, "man", "Builds and installs man pages") orelse false;
 
     const exe = exe: {
         const exe = b.addExecutable(.{
@@ -43,9 +44,6 @@ pub fn build(b: *std.Build) void {
         break :exe exe;
     };
 
-    // Default step
-    b.installArtifact(exe);
-
     // "zig build run"
     {
         const step = b.step("run", "Build and run sunwait");
@@ -56,5 +54,31 @@ pub fn build(b: *std.Build) void {
         }
 
         step.dependOn(&run.step);
+    }
+
+    const man = man: {
+        const cmd = b.addSystemCommand(&.{"asciidoctor"});
+
+        cmd.addArgs(&.{ "-b", "manpage" });
+        cmd.addFileArg(b.path("docs/sunwait.adoc"));
+        cmd.addArg("--out-file");
+        const out = cmd.addOutputFileArg("sunwait.1");
+
+        break :man b.addInstallFile(out, "share/man/man1/sunwait.1");
+    };
+
+    // "zig build man"
+    {
+        const step = b.step("man", "Build man pages");
+        step.dependOn(&man.step);
+    }
+
+    // "zig build"
+    {
+        b.installArtifact(exe);
+
+        if (man_opt) {
+            b.getInstallStep().dependOn(&man.step);
+        }
     }
 }

@@ -36,7 +36,10 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        nativeBuildInputs = with pkgs; [ zig ];
+        nativeBuildInputs = with pkgs; [
+          zig
+          asciidoctor
+        ];
       in
       {
         packages.default = pkgs.stdenvNoCC.mkDerivation {
@@ -49,6 +52,8 @@
           };
 
           nativeBuildInputs = nativeBuildInputs ++ [ pkgs.zig.hook ];
+
+          zigBuildFlags = [ "-Dman" ];
         };
 
         devShell = pkgs.mkShell {

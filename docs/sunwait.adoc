@@ -1,0 +1,143 @@
+// Copyright (C) 2025 Shota FUJI
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+= sunwait(1)
+:docdate: 2025-07-09
+:doctype: manpage
+:mansource: sunwait
+
+== Name
+
+sunwait - Calculates sunrise or sunset times
+
+== Synposis
+
+// TODO: Split these into dedicated pages
+
+*sunwait* *poll* [_general options_] [_calculation options_]
+
+*sunwait* *wait* [_general options_] [_calculation options_]
+
+*sunwait* *list* [_DAYS_] [_general options_] [_calculation options_]
+
+*sunwait* *report* [*d* _<DAY>_] [*m* _<MONTH>_] [*y* _<YEAR>_] [_general options_] [_calculation options_]
+
+*sunwait* *report* *today* [_options_] [_calculation options_]
+
+== Description
+
+Sunwait calculates, displays, or waits for sunrise or sunset times at the given location.
+
+*poll* will be called if no command is specified.
+
+== Options
+
+=== General options
+
+++[++*no*]*debug*::
+	Prints debug logs. *wait* command exits in one minute if this option is set.
+
+++[++*no*]*version*::
+	Print the version number.
+
+++[++*no*]*help*::
+	Print help message.
+
+++[++*no*]*gmt*::
+	Print times in GMT.
+
+=== Calculation options
+
+_TWILIGHT TYPE_::
+*sunwait* considers it's day when twilight starts and night when twilight ends.
+This option sets a twilight type, which defines an angle of the Sun to consider twilight.
+Possible values are:
+
+* *daylight*      Top of the Sun just below (0 degrees) the horizon.
+* *civil*         Civil twilight, top of the Sun 6 degrees below the horizon.
+* *nautical*      Nautical twilight, top of the Sun 12 degrees below the horizon.
+* *astronomical*  Astronomical twilight, top of the Sun 18 degrees below the horizon.
+
++
+The default value is *daylight*.
+You can also set arbitrary angle with "*angle* _<degree>_".
+
+_SUNRISE OR SUNSET_::
+Targets sunrise or sunset when set.
+If this option is not set, *sunwait* targets both.
+
+* *rise*   Sunrise, the Sun rose and the twilight starts.
+* *set*    Sunset, the Sun set past the twilight.
+
+_OFFSET_::
+Time offset to add to sunrise time and subtract from sunset time.
+This offset value shifts sunrise and sunset time towards noon by the specified amount.
+The value can be either of _MM_ (minutes) or _HH:MM_, and can have minus sign to represent negative amount.
+
+_LATITUDE_::
+Degrees in positive floating point without a unit, suffixed with *N* or *S*.
+When unspecified, this will be the latitude of Bingham, England.
+
+_LONGITUDE_::
+Degrees in positive floating point without a unit, suffixed with *E* or *W*.
+When unspecified, this will be the longitude of Bingham, England.
+
+_DAYS_::
+Prints report for next _N_ days, where _N_ is the specified value.
+Defaults to *1*.
+
+*d* _<DAY>_::
+Day of the month. 1 to 31.
+
+*m* _<MONTH>_::
+Month. 1 to 12.
+
+*y* _<YEAR>_::
+Years since 2000. 0 to 99.
+
+== Exit status
+
+*0*    Command successfully ended.
+
+*1*    Error, uncategorized or generic.
+
+*2*    It's day or twilight. Only *poll* exits with this status.
+
+*3*    It' night (after twilight). Only *poll* exits with this status.
+
+== Examples
+
+Prints it's DAY or NIGHT at Giza Necropolis.
+
+[,shell]
+----
+sunwait poll 29.977435N 31.132484E
+----
+
+Waits for 10 minutes before sunset at Giza Necropolis.
+
+[,shell]
+----
+sunwait wait set offset 10 29.977435N 31.132484E
+----
+
+Wait until 1 hour 15 minutes 10 seconds before the Sun rises in Greenwich, London.
+
+[,shell]
+----
+sunwait wait rise offset -1:15:10 51.477932N 0.000000E
+----
