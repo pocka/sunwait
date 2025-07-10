@@ -513,6 +513,8 @@ OnOff isDay (const runStruct *pRun)
   ) ? ONOFF_ON : ONOFF_OFF;
 }
 
+#ifndef SUNWAIT_NOMAIN
+
 /*
 **
 ** >>>>> main() <<<<<
@@ -919,6 +921,8 @@ int main (int argc, char *argv[])
 
   exit (exitCode);
 }
+
+#endif
 
 /*
 ** Simply check if we think now/current-time is night OR day (day includes twilight)

@@ -21,6 +21,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const man_opt = b.option(bool, "man", "Builds and installs man pages") orelse false;
+    const zig_main = b.option(bool, "zigmain", "Use Zig rewrite") orelse false;
 
     const exe = exe: {
         const exe = b.addExecutable(.{
@@ -28,6 +29,11 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
         });
+
+        if (zig_main) {
+            exe.root_module.root_source_file = b.path("src/main.zig");
+            exe.root_module.addCMacro("SUNWAIT_NOMAIN", "");
+        }
 
         exe.linkLibC();
 
