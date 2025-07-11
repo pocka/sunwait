@@ -16,6 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 const std = @import("std");
+const config = @import("config");
 
 const c = @cImport({
     @cInclude("time.h");
@@ -27,6 +28,8 @@ const ExitCode = enum(u8) {
     generic_error = 1,
     day = 2,
     night = 3,
+    out_of_memory = 10,
+    stdout_write_error = 11,
 
     pub fn code(self: ExitCode) u8 {
         return @intFromEnum(self);
@@ -42,7 +45,6 @@ const RunOptions = struct {
     target_time: c.time_t = 0,
     now_delta: c_ulong = 0,
     target_delta: c_ulong = 0,
-    function_version: c.OnOff = c.ONOFF_OFF,
     function_usage: c.OnOff = c.ONOFF_OFF,
     function_report: c.OnOff = c.ONOFF_OFF,
     function_list: c.OnOff = c.ONOFF_OFF,
@@ -74,7 +76,7 @@ const RunOptions = struct {
             .targetTimet = self.target_time,
             .now2000 = self.now_delta,
             .target2000 = self.target_delta,
-            .functionVersion = self.function_version,
+            .functionVersion = c.ONOFF_OFF,
             .functionUsage = self.function_usage,
             .functionReport = self.function_report,
             .functionList = self.function_list,
@@ -91,8 +93,30 @@ const RunOptions = struct {
 };
 
 pub fn main() u8 {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+
+    const allocator = arena.allocator();
+
     const opts = RunOptions.init();
     var c_opts = opts.toC();
+
+    var args = std.process.ArgIterator.initWithAllocator(allocator) catch {
+        return ExitCode.out_of_memory.code();
+    };
+    defer args.deinit();
+
+    _ = args.skip();
+    while (args.next()) |arg| {
+        if (std.mem.eql(u8, "-v", arg) or std.mem.eql(u8, "--version", arg)) {
+            std.fmt.format(std.io.getStdOut().writer(), "{s}\n", .{config.version}) catch |err| {
+                std.log.err("Unable to write to stdout: {s}", .{@errorName(err)});
+                return ExitCode.stdout_write_error.code();
+            };
+
+            return ExitCode.ok.code();
+        }
+    }
 
     return switch (c.sunpoll(&c_opts)) {
         c.EXIT_DAY => ExitCode.day.code(),

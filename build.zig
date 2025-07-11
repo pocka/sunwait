@@ -22,11 +22,13 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const man_opt = b.option(bool, "man", "Builds and installs man pages") orelse false;
     const zig_main = b.option(bool, "zigmain", "Use Zig rewrite") orelse false;
+    const version = b.option([]const u8, "version", "Application version, without \"v\" prefix") orelse "dev";
 
     const exe = addExe(b, .{
         .target = target,
         .optimize = optimize,
         .zig_main = zig_main,
+        .version = version,
     });
 
     // "zig build run"
@@ -74,12 +76,14 @@ pub fn build(b: *std.Build) void {
         const legacy_exe = addExe(b, .{
             .target = target,
             .optimize = optimize,
+            .version = "0.91",
         });
 
         const new_exe = addExe(b, .{
             .target = target,
             .optimize = optimize,
             .zig_main = true,
+            .version = version,
         });
 
         const t = b.addTest(.{
@@ -104,6 +108,7 @@ const AddExeOptions = struct {
     target: ?std.Build.ResolvedTarget = null,
     optimize: std.builtin.OptimizeMode,
     zig_main: bool = false,
+    version: []const u8,
 };
 
 fn addExe(b: *std.Build, opts: AddExeOptions) *std.Build.Step.Compile {
@@ -116,6 +121,10 @@ fn addExe(b: *std.Build, opts: AddExeOptions) *std.Build.Step.Compile {
     if (opts.zig_main) {
         exe.root_module.root_source_file = b.path("src/main.zig");
         exe.root_module.addCMacro("SUNWAIT_NOMAIN", "");
+
+        const config = b.addOptions();
+        config.addOption([]const u8, "version", opts.version);
+        exe.root_module.addOptions("config", config);
     }
 
     exe.linkLibC();
