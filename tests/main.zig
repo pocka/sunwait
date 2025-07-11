@@ -15,7 +15,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-only
 
-test {
+comptime {
     _ = @import("./report.zig");
     _ = @import("./poll.zig");
 }
