@@ -23,32 +23,11 @@ pub fn build(b: *std.Build) void {
     const man_opt = b.option(bool, "man", "Builds and installs man pages") orelse false;
     const zig_main = b.option(bool, "zigmain", "Use Zig rewrite") orelse false;
 
-    const exe = exe: {
-        const exe = b.addExecutable(.{
-            .name = "sunwait",
-            .target = target,
-            .optimize = optimize,
-        });
-
-        if (zig_main) {
-            exe.root_module.root_source_file = b.path("src/main.zig");
-            exe.root_module.addCMacro("SUNWAIT_NOMAIN", "");
-        }
-
-        exe.linkLibC();
-
-        exe.addCSourceFiles(.{
-            .files = &.{
-                "src/print.c",
-                "src/sunriset.c",
-                "src/sunwait.c",
-            },
-        });
-
-        exe.addIncludePath(b.path("src"));
-
-        break :exe exe;
-    };
+    const exe = addExe(b, .{
+        .target = target,
+        .optimize = optimize,
+        .zig_main = zig_main,
+    });
 
     // "zig build run"
     {
@@ -87,4 +66,69 @@ pub fn build(b: *std.Build) void {
             b.getInstallStep().dependOn(&man.step);
         }
     }
+
+    // "zig build behavior_test"
+    {
+        const step = b.step("behavior_test", "Run behavior matching tests");
+
+        const legacy_exe = addExe(b, .{
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const new_exe = addExe(b, .{
+            .target = target,
+            .optimize = optimize,
+            .zig_main = true,
+        });
+
+        const t = b.addTest(.{
+            .name = "behavior_matching_test",
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("tests/main.zig"),
+        });
+
+        const config = b.addOptions();
+        config.addOptionPath("legacy_bin", legacy_exe.getEmittedBin());
+        config.addOptionPath("new_bin", new_exe.getEmittedBin());
+
+        t.root_module.addOptions("config", config);
+
+        const run = b.addRunArtifact(t);
+        step.dependOn(&run.step);
+    }
+}
+
+const AddExeOptions = struct {
+    target: ?std.Build.ResolvedTarget = null,
+    optimize: std.builtin.OptimizeMode,
+    zig_main: bool = false,
+};
+
+fn addExe(b: *std.Build, opts: AddExeOptions) *std.Build.Step.Compile {
+    const exe = b.addExecutable(.{
+        .name = "sunwait",
+        .target = opts.target,
+        .optimize = opts.optimize,
+    });
+
+    if (opts.zig_main) {
+        exe.root_module.root_source_file = b.path("src/main.zig");
+        exe.root_module.addCMacro("SUNWAIT_NOMAIN", "");
+    }
+
+    exe.linkLibC();
+
+    exe.addCSourceFiles(.{
+        .files = &.{
+            "src/print.c",
+            "src/sunriset.c",
+            "src/sunwait.c",
+        },
+    });
+
+    exe.addIncludePath(b.path("src"));
+
+    return exe;
 }
