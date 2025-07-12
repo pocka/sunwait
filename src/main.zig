@@ -18,6 +18,8 @@
 const std = @import("std");
 const config = @import("config");
 
+const RunOptions = @import("./RunOptions.zig");
+
 const c = @cImport({
     @cInclude("time.h");
     @cInclude("sunriset.h");
@@ -36,61 +38,41 @@ const ExitCode = enum(u8) {
     }
 };
 
-const RunOptions = struct {
-    latitude: f64 = c.DEFAULT_LATITUDE,
-    longitude: f64 = c.DEFAULT_LONGITUDE,
-    offset_hour: f64 = 0,
-    twilight_angle: f64 = c.TWILIGHT_ANGLE_DAYLIGHT,
-    now: c.time_t = 0,
-    target_time: c.time_t = 0,
-    now_delta: c_ulong = 0,
-    target_delta: c_ulong = 0,
-    function_usage: c.OnOff = c.ONOFF_OFF,
-    function_report: c.OnOff = c.ONOFF_OFF,
-    function_list: c.OnOff = c.ONOFF_OFF,
-    function_poll: c.OnOff = c.ONOFF_OFF,
-    function_wait: c.OnOff = c.ONOFF_OFF,
-    utc: c.OnOff = c.ONOFF_OFF,
-    debug: c.OnOff = c.ONOFF_OFF,
-    report_sunrise: c.OnOff = c.ONOFF_OFF,
-    report_sunset: c.OnOff = c.ONOFF_OFF,
-    list_days: c_uint = c.DEFAULT_LIST,
-    utc_bias_hours: f64 = 0,
-
-    pub fn init() @This() {
-        var opts = RunOptions{};
-
-        _ = c.time(&opts.now);
-        opts.now_delta = c.daysSince2000(&opts.now);
-
-        return opts;
-    }
-
-    pub fn toC(self: *const RunOptions) c.runStruct {
-        return c.runStruct{
-            .latitude = self.latitude,
-            .longitude = self.longitude,
-            .offsetHour = self.offset_hour,
-            .twilightAngle = self.twilight_angle,
-            .nowTimet = self.now,
-            .targetTimet = self.target_time,
-            .now2000 = self.now_delta,
-            .target2000 = self.target_delta,
-            .functionVersion = c.ONOFF_OFF,
-            .functionUsage = self.function_usage,
-            .functionReport = self.function_report,
-            .functionList = self.function_list,
-            .functionPoll = self.function_poll,
-            .functionWait = self.function_wait,
-            .utc = self.utc,
-            .debug = self.debug,
-            .reportSunrise = self.report_sunrise,
-            .reportSunset = self.report_sunset,
-            .listDays = self.list_days,
-            .utcBiasHours = self.utc_bias_hours,
-        };
-    }
-};
+fn writeHelp(writer: anytype, bin: []const u8) !void {
+    try std.fmt.format(writer,
+        \\[Usage]
+        \\{s} [options...] <command> [parameters...]
+        \\
+        \\[Options]
+        \\-v, --version   Prints version to stdout and exits.
+        \\-h, --help      Prints this message to stdout and exits.
+        \\
+        \\[Commands]
+        \\poll     Prints whether it's DAY or NIGHT.
+        \\wait     Sleep until sunrise and/or sunset, then exits.
+        \\report   Prints sunrise and sunset times.
+        \\list     List sunrise and sunset times for next <DAYS>.
+        \\
+        \\[Common Parameters]
+        \\TWILIGHT      Twilight type. Valid values are:
+        \\              * daylight
+        \\              * civil
+        \\              * nautical
+        \\              * astronomical
+        \\              * angle <degree>
+        \\EVENT TYPE    Use "rise" for sunrise and "set" for sunset.
+        \\              If this parameter is not set, sunwait targets both.
+        \\OFFSET        Time offset for sunrise and sunset time, towards noon.
+        \\              Format must be "MM" (minutes) or "HH:MM".
+        \\LATITUDE      Angle in degree, positive floating point number.
+        \\              Must have N or S suffix.
+        \\LONGITUDE     Angle in degree, positive floating point number.
+        \\              Must have E or W suffix.
+        \\
+        \\See man page for "sunwait(1)" for more.
+        \\
+    , .{bin});
+}
 
 pub fn main() u8 {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -106,11 +88,24 @@ pub fn main() u8 {
     };
     defer args.deinit();
 
-    _ = args.skip();
+    const bin_name = args.next() orelse {
+        std.log.err("Got no arguments, exiting.", .{});
+        return ExitCode.generic_error.code();
+    };
+
     while (args.next()) |arg| {
         if (std.mem.eql(u8, "-v", arg) or std.mem.eql(u8, "--version", arg)) {
             std.fmt.format(std.io.getStdOut().writer(), "{s}\n", .{config.version}) catch |err| {
                 std.log.err("Unable to write to stdout: {s}", .{@errorName(err)});
+                return ExitCode.stdout_write_error.code();
+            };
+
+            return ExitCode.ok.code();
+        }
+
+        if (std.mem.eql(u8, "-h", arg) or std.mem.eql(u8, "--help", arg)) {
+            writeHelp(std.io.getStdOut().writer(), bin_name) catch |err| {
+                std.log.err("Unable to write help message to stdout: {s}", .{@errorName(err)});
                 return ExitCode.stdout_write_error.code();
             };
 
