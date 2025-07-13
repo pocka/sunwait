@@ -46,6 +46,8 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\[Options]
         \\-v, --version   Prints version to stdout and exits.
         \\-h, --help      Prints this message to stdout and exits.
+        \\--debug         Prints debug log, and shortens "wait" duration
+        \\                to one minute.
         \\
         \\[Commands]
         \\poll     Prints whether it's DAY or NIGHT.
@@ -80,8 +82,7 @@ pub fn main() u8 {
 
     const allocator = arena.allocator();
 
-    const opts = RunOptions.init();
-    var c_opts = opts.toC();
+    var opts = RunOptions.init();
 
     var args = std.process.ArgIterator.initWithAllocator(allocator) catch {
         return ExitCode.out_of_memory.code();
@@ -111,7 +112,14 @@ pub fn main() u8 {
 
             return ExitCode.ok.code();
         }
+
+        if (std.mem.eql(u8, "--debug", arg)) {
+            opts.debug = true;
+            continue;
+        }
     }
+
+    var c_opts = opts.toC();
 
     return switch (c.sunpoll(&c_opts)) {
         c.EXIT_DAY => ExitCode.day.code(),

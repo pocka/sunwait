@@ -47,3 +47,26 @@ test {
     // try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
     // try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
 }
+
+test {
+    const regular = try poll(std.testing.allocator, config.new_bin);
+    defer std.testing.allocator.free(regular.stderr);
+    defer std.testing.allocator.free(regular.stdout);
+
+    var env = std.process.EnvMap.init(std.testing.allocator);
+    defer env.deinit();
+
+    try env.put("TZ", "UTC");
+
+    const debug = try std.process.Child.run(.{
+        .allocator = std.testing.allocator,
+        .argv = &.{ config.new_bin, "--debug", "poll", "29.977435N", "31.132484E" },
+        .env_map = &env,
+    });
+    defer std.testing.allocator.free(debug.stderr);
+    defer std.testing.allocator.free(debug.stdout);
+
+    // Original sunwait prints debug log to stdout.
+    // TODO: Print to stderr
+    try std.testing.expect(debug.stdout.len > regular.stdout.len);
+}
