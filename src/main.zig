@@ -147,3 +147,7 @@ pub fn main() u8 {
         },
     }
 }
+
+test {
+    _ = @import("./RunOptions.zig");
+}

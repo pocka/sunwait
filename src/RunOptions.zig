@@ -190,7 +190,59 @@ fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) Par
         return;
     }
 
+    if (parseSuffixedLatitude(arg)) |lat| {
+        self.latitude = lat;
+        return;
+    }
+
+    if (parseSuffixedLongitude(arg)) |lon| {
+        self.longitude = lon;
+        return;
+    }
+
     return ParseArgsError.UnknownArg;
+}
+
+fn parseSuffixedLatitude(x: []const u8) ?f64 {
+    if (x.len <= 1) {
+        return null;
+    }
+
+    const lastChar = x[x.len - 1];
+    const value = std.fmt.parseFloat(f64, x[0 .. x.len - 1]) catch return null;
+
+    return switch (lastChar) {
+        'N' => value,
+        'S' => -value,
+        else => null,
+    };
+}
+
+test parseSuffixedLatitude {
+    try std.testing.expectEqual(29.977435, parseSuffixedLatitude("29.977435N"));
+    try std.testing.expectEqual(-29.977435, parseSuffixedLatitude("29.977435S"));
+    try std.testing.expectEqual(null, parseSuffixedLatitude("29.977435W"));
+}
+
+fn parseSuffixedLongitude(x: []const u8) ?f64 {
+    if (x.len <= 1) {
+        return null;
+    }
+
+    const lastChar = x[x.len - 1];
+    const value = std.fmt.parseFloat(f64, x[0 .. x.len - 1]) catch return null;
+
+    return switch (lastChar) {
+        'E' => value,
+        'W' => -value,
+        else => null,
+    };
+}
+
+test parseSuffixedLongitude {
+    try std.testing.expectEqual(31.132484, parseSuffixedLongitude("31.132484E"));
+    try std.testing.expectEqual(-31.132484, parseSuffixedLongitude("31.132484W"));
+    try std.testing.expectEqual(null, parseSuffixedLongitude("31.132484N"));
 }
 
 pub fn toC(self: *const @This()) c.runStruct {

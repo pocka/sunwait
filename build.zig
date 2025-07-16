@@ -69,6 +69,32 @@ pub fn build(b: *std.Build) void {
         }
     }
 
+    // "zig build test"
+    {
+        const step = b.step("test", "Run unit tests");
+
+        const t = b.addTest(.{
+            .name = "unit_test",
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("src/main.zig"),
+        });
+
+        t.linkLibC();
+        t.addCSourceFiles(.{
+            .files = &.{
+                "src/print.c",
+                "src/sunriset.c",
+                "src/sunwait.c",
+            },
+        });
+        t.addIncludePath(b.path("src"));
+        t.root_module.addCMacro("SUNWAIT_NOMAIN", "");
+
+        const run = b.addRunArtifact(t);
+        step.dependOn(&run.step);
+    }
+
     // "zig build behavior_test"
     {
         const step = b.step("behavior_test", "Run behavior matching tests");
