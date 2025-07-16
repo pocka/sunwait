@@ -32,6 +32,8 @@ const ExitCode = enum(u8) {
     night = 3,
     out_of_memory = 10,
     stdout_write_error = 11,
+    stderr_write_error = 12,
+    incorrect_usage = 15,
 
     pub fn code(self: ExitCode) u8 {
         return @intFromEnum(self);
@@ -95,47 +97,53 @@ pub fn main() u8 {
         return ExitCode.generic_error.code();
     };
 
-    while (args.next()) |arg| {
-        if (std.mem.eql(u8, "-v", arg) or std.mem.eql(u8, "--version", arg)) {
-            std.fmt.format(std.io.getStdOut().writer(), "{s}\n", .{config.version}) catch |err| {
-                std.log.err("Unable to write to stdout: {s}", .{@errorName(err)});
-                return ExitCode.stdout_write_error.code();
-            };
+    opts.parseArgs(&args) catch {
+        writeHelp(std.io.getStdErr().writer(), bin_name) catch |err| {
+            std.log.err("Unable to write help message to stderr: {s}", .{@errorName(err)});
+            return ExitCode.stdout_write_error.code();
+        };
 
-            return ExitCode.ok.code();
-        }
+        return ExitCode.incorrect_usage.code();
+    };
 
-        if (std.mem.eql(u8, "-h", arg) or std.mem.eql(u8, "--help", arg)) {
+    switch (opts.command) {
+        .help => {
             writeHelp(std.io.getStdOut().writer(), bin_name) catch |err| {
                 std.log.err("Unable to write help message to stdout: {s}", .{@errorName(err)});
                 return ExitCode.stdout_write_error.code();
             };
 
             return ExitCode.ok.code();
-        }
+        },
+        .version => {
+            std.fmt.format(std.io.getStdOut().writer(), "{s}\n", .{config.version}) catch |err| {
+                std.log.err("Unable to write to stdout: {s}", .{@errorName(err)});
+                return ExitCode.stdout_write_error.code();
+            };
 
-        if (std.mem.eql(u8, "--debug", arg)) {
-            opts.debug = true;
-            continue;
-        }
+            return ExitCode.ok.code();
+        },
+        .poll => {
+            var c_opts = opts.toC();
 
-        if (std.mem.eql(u8, "--utc", arg)) {
-            opts.utc = true;
-            continue;
-        }
-
-        if (std.mem.eql(u8, "--gmt", arg)) {
-            std.log.warn("--gmt is deprecated. Use --utc instead.", .{});
-            opts.utc = true;
-            continue;
-        }
+            return switch (c.sunpoll(&c_opts)) {
+                c.EXIT_DAY => ExitCode.day.code(),
+                c.EXIT_NIGHT => ExitCode.night.code(),
+                else => ExitCode.generic_error.code(),
+            };
+        },
+        .list => |command_opts| {
+            _ = command_opts;
+            std.log.err("list command is not implemented", .{});
+            return ExitCode.generic_error.code();
+        },
+        .report => {
+            std.log.err("report command is not implemented", .{});
+            return ExitCode.generic_error.code();
+        },
+        .wait => {
+            std.log.err("wait command is not implemented", .{});
+            return ExitCode.generic_error.code();
+        },
     }
-
-    var c_opts = opts.toC();
-
-    return switch (c.sunpoll(&c_opts)) {
-        c.EXIT_DAY => ExitCode.day.code(),
-        c.EXIT_NIGHT => ExitCode.night.code(),
-        else => ExitCode.generic_error.code(),
-    };
 }

@@ -60,7 +60,8 @@ test {
 
     const debug = try std.process.Child.run(.{
         .allocator = std.testing.allocator,
-        .argv = &.{ config.new_bin, "--debug", "poll", "29.977435N", "31.132484E" },
+        // TODO: Put coordinate once "poll" accepts lat/lon arguments
+        .argv = &.{ config.new_bin, "--debug", "poll" },
         .env_map = &env,
     });
     defer std.testing.allocator.free(debug.stderr);
