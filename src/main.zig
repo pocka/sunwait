@@ -126,11 +126,30 @@ pub fn main() u8 {
         .poll => {
             var c_opts = opts.toC();
 
-            return switch (c.sunpoll(&c_opts)) {
-                c.EXIT_DAY => ExitCode.day.code(),
-                c.EXIT_NIGHT => ExitCode.night.code(),
-                else => ExitCode.generic_error.code(),
-            };
+            switch (c.sunpoll(&c_opts)) {
+                c.EXIT_DAY => {
+                    std.io.getStdOut().writeAll("DAY\n") catch |err| {
+                        std.log.err("Unable to write \"DAY\" to stdout: {s}", .{@errorName(err)});
+                        return ExitCode.stdout_write_error.code();
+                    };
+                    return ExitCode.day.code();
+                },
+                c.EXIT_NIGHT => {
+                    std.io.getStdOut().writeAll("NIGHT\n") catch |err| {
+                        std.log.err("Unable to write \"NIGHT\" to stdout: {s}", .{@errorName(err)});
+                        return ExitCode.stdout_write_error.code();
+                    };
+                    return ExitCode.night.code();
+                },
+                else => {
+                    // TODO: Print to stderr after CLI rewrite
+                    std.io.getStdOut().writeAll("ERROR\n") catch |err| {
+                        std.log.err("Unable to write \"ERROR\" to stdout: {s}", .{@errorName(err)});
+                        return ExitCode.stdout_write_error.code();
+                    };
+                    return ExitCode.generic_error.code();
+                },
+            }
         },
         .list => |command_opts| {
             _ = command_opts;
