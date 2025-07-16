@@ -48,6 +48,7 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\-h, --help      Prints this message to stdout and exits.
         \\--debug         Prints debug log, and shortens "wait" duration
         \\                to one minute.
+        \\--utc           Dates and times will use UTC rather than local time.
         \\
         \\[Commands]
         \\poll     Prints whether it's DAY or NIGHT.
@@ -115,6 +116,17 @@ pub fn main() u8 {
 
         if (std.mem.eql(u8, "--debug", arg)) {
             opts.debug = true;
+            continue;
+        }
+
+        if (std.mem.eql(u8, "--utc", arg)) {
+            opts.utc = true;
+            continue;
+        }
+
+        if (std.mem.eql(u8, "--gmt", arg)) {
+            std.log.warn("--gmt is deprecated. Use --utc instead.", .{});
+            opts.utc = true;
             continue;
         }
     }
