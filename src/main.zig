@@ -85,7 +85,7 @@ pub fn main() u8 {
 
     const allocator = arena.allocator();
 
-    var opts = RunOptions.init();
+    var opts = RunOptions{};
 
     var args = std.process.ArgIterator.initWithAllocator(allocator) catch {
         return ExitCode.out_of_memory.code();

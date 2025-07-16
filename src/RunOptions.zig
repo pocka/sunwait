@@ -26,10 +26,7 @@ latitude: f64 = c.DEFAULT_LATITUDE,
 longitude: f64 = c.DEFAULT_LONGITUDE,
 offset_hour: f64 = 0,
 twilight_angle: f64 = c.TWILIGHT_ANGLE_DAYLIGHT,
-now: c.time_t = 0,
-target_time: c.time_t = 0,
-now_delta: c_ulong = 0,
-target_delta: c_ulong = 0,
+target_time: ?c.time_t = null,
 utc: bool = false,
 debug: bool = false,
 report_sunrise: c.OnOff = c.ONOFF_OFF,
@@ -96,15 +93,6 @@ pub const CommandOptions = union(Command) {
         }
     }
 };
-
-pub fn init() @This() {
-    var opts = @This(){};
-
-    _ = c.time(&opts.now);
-    opts.now_delta = c.daysSince2000(&opts.now);
-
-    return opts;
-}
 
 const ParseState = enum {
     no_command,
@@ -246,15 +234,20 @@ test parseSuffixedLongitude {
 }
 
 pub fn toC(self: *const @This()) c.runStruct {
+    var now: c.time_t = undefined;
+    _ = c.time(&now);
+
+    var target_time: c.time_t = self.target_time orelse now;
+
     return c.runStruct{
         .latitude = self.latitude,
         .longitude = self.longitude,
         .offsetHour = self.offset_hour,
         .twilightAngle = self.twilight_angle,
-        .nowTimet = self.now,
-        .targetTimet = self.target_time,
-        .now2000 = self.now_delta,
-        .target2000 = self.target_delta,
+        .nowTimet = now,
+        .targetTimet = target_time,
+        .now2000 = c.daysSince2000(&now),
+        .target2000 = c.daysSince2000(&target_time),
         .functionVersion = c.ONOFF_OFF,
         .functionUsage = c.ONOFF_OFF,
         .functionReport = c.ONOFF_OFF,
