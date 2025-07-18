@@ -19,40 +19,117 @@ const std = @import("std");
 
 const config = @import("config");
 
-fn report(allocator: std.mem.Allocator, bin: []const u8) !std.process.Child.RunResult {
+const ReportOptions = struct {
+    bin: []const u8,
+    utc: bool = false,
+    longitude: []const u8 = "31.132484E",
+    latitude: []const u8 = "29.977435N",
+    tz: []const u8 = "UTC",
+    dates: []const []const u8 = &.{},
+};
+
+fn report(allocator: std.mem.Allocator, opts: ReportOptions) !std.process.Child.RunResult {
     var env = std.process.EnvMap.init(allocator);
     defer env.deinit();
 
-    try env.put("TZ", "UTC");
+    try env.put("TZ", opts.tz);
+
+    var args = std.ArrayList([]const u8).init(allocator);
+    defer args.deinit();
+
+    try args.append(opts.bin);
+    if (opts.utc) {
+        try args.append("utc");
+    }
+    try args.append("report");
+    try args.appendSlice(opts.dates);
+    try args.append(opts.latitude);
+    try args.append(opts.longitude);
 
     return try std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &.{
-            bin,
-            "report",
-            "d",
-            "1",
-            "m",
-            "1",
-            "y",
-            "1",
-            "29.977435N",
-            "31.132484E",
-        },
+        .argv = args.items,
         .env_map = &env,
     });
 }
+
 test {
-    const legacy = try report(std.testing.allocator, config.legacy_bin);
+    const legacy = try report(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+    });
     defer std.testing.allocator.free(legacy.stderr);
     defer std.testing.allocator.free(legacy.stdout);
 
-    const new = try report(std.testing.allocator, config.new_bin);
+    const new = try report(std.testing.allocator, .{
+        .bin = config.new_bin,
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same with utc option" {
+    const legacy = try report(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .utc = true,
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try report(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .utc = true,
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same in non-UTC timezone" {
+    const legacy = try report(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .tz = "Australia/Sydney",
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try report(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .tz = "Australia/Sydney",
+    });
     defer std.testing.allocator.free(new.stderr);
     defer std.testing.allocator.free(new.stdout);
 
     return error.SkipZigTest;
-    // TODO: Uncomment these once "report" is implemented.
+    // TODO: Uncomment below once tz offset is handled
+    // try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    // try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    // try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same with date parameter" {
+    const legacy = try report(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .dates = &.{ "d", "1", "m", "2", "y", "10" },
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try report(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .dates = &.{ "d", "1", "m", "2", "y", "10" },
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    return error.SkipZigTest;
+    // TODO: Uncomment below once new binary accepts date args
     // try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
     // try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
     // try std.testing.expectEqualStrings(legacy.stdout, new.stdout);

@@ -164,8 +164,10 @@ pub fn main() u8 {
             return ExitCode.ok.code();
         },
         .report => {
-            std.log.err("report command is not implemented", .{});
-            return ExitCode.generic_error.code();
+            var c_opts = opts.toC();
+
+            c.generate_report(&c_opts);
+            return ExitCode.ok.code();
         },
         .wait => {
             std.log.err("wait command is not implemented", .{});
