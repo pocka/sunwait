@@ -106,11 +106,9 @@ test "Should behave same in non-UTC timezone" {
     defer std.testing.allocator.free(new.stderr);
     defer std.testing.allocator.free(new.stdout);
 
-    return error.SkipZigTest;
-    // TODO: Uncomment below once tz offset is handled
-    // try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
-    // try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
-    // try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
 }
 
 test "Should behave same with date parameter" {
@@ -150,9 +148,7 @@ test "Should behave same with date parameter, in non-UTC timezone" {
     defer std.testing.allocator.free(new.stderr);
     defer std.testing.allocator.free(new.stdout);
 
-    return error.SkipZigTest;
-    // TODO: Uncomment below once tz offset is handled
-    // try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
-    // try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
-    // try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
 }

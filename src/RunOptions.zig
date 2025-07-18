@@ -30,7 +30,6 @@ utc: bool = false,
 debug: bool = false,
 report_sunrise: c.OnOff = c.ONOFF_ON,
 report_sunset: c.OnOff = c.ONOFF_ON,
-utc_bias_hours: f64 = 0,
 command: CommandOptions = .poll,
 
 pub const ParseArgsError = error{
@@ -425,6 +424,9 @@ pub fn toC(self: *const @This()) c.runStruct {
         else => getTargetDay(now, .{ .is_utc = self.utc }),
     };
 
+    // This effectful function updates `c.timezone`.
+    c.tzset();
+
     return c.runStruct{
         .latitude = self.latitude orelse c.DEFAULT_LATITUDE,
         .longitude = self.longitude orelse c.DEFAULT_LONGITUDE,
@@ -448,6 +450,6 @@ pub fn toC(self: *const @This()) c.runStruct {
             .list => |opts| opts.days,
             else => c.DEFAULT_LIST,
         },
-        .utcBiasHours = self.utc_bias_hours,
+        .utcBiasHours = @as(f64, @floatFromInt(c.timezone)) / 60.0 / 60.0,
     };
 }
