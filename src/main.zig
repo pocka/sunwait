@@ -52,6 +52,16 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\                to one minute.
         \\--utc           Dates and times will use UTC rather than local time.
         \\
+        \\--lat <DEGREE>, --latitude <DEGREE>
+        \\                Latitude of the point to calculate sunrise and sunset.
+        \\                <DEGREE> must be a floating point number or a positive
+        \\                floating point number with N or S suffix.
+        \\
+        \\--lon <DEGREE>, --longitude <DEGREE>
+        \\                Longitude of the point to calculate sunrise and sunset.
+        \\                <DEGREE> must be a floating point number or a positive
+        \\                floating point number with E or W suffix.
+        \\
         \\[Commands]
         \\poll     Prints whether it's DAY or NIGHT.
         \\wait     Sleep until sunrise and/or sunset, then exits.
@@ -69,10 +79,6 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\              If this parameter is not set, sunwait targets both.
         \\OFFSET        Time offset for sunrise and sunset time, towards noon.
         \\              Format must be "MM" (minutes) or "HH:MM".
-        \\LATITUDE      Angle in degree, positive floating point number.
-        \\              Must have N or S suffix.
-        \\LONGITUDE     Angle in degree, positive floating point number.
-        \\              Must have E or W suffix.
         \\
         \\See man page for "sunwait(1)" for more.
         \\

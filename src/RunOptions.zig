@@ -22,8 +22,8 @@ const c = @cImport({
     @cInclude("sunriset.h");
 });
 
-latitude: f64 = c.DEFAULT_LATITUDE,
-longitude: f64 = c.DEFAULT_LONGITUDE,
+latitude: ?f64 = null,
+longitude: ?f64 = null,
 offset_hour: f64 = 0,
 twilight_angle: f64 = c.TWILIGHT_ANGLE_DAYLIGHT,
 target_time: ?c.time_t = null,
@@ -37,6 +37,9 @@ command: CommandOptions = .poll,
 
 pub const ParseArgsError = error{
     UnknownArg,
+    MissingValue,
+    InvalidLatitudeFormat,
+    InvalidLongitudeFormat,
 };
 
 pub const ListOptions = struct {
@@ -178,12 +181,56 @@ fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) Par
         return;
     }
 
+    if (std.mem.eql(u8, "--lat", arg) or std.mem.eql(u8, "--latitude", arg)) {
+        const next = args.next() orelse {
+            std.log.err("{s} option requires a value", .{arg});
+            return ParseArgsError.MissingValue;
+        };
+
+        const lat = parseSuffixedLatitude(next) orelse std.fmt.parseFloat(f64, next) catch {
+            return ParseArgsError.InvalidLatitudeFormat;
+        };
+
+        if (self.latitude) |prev| {
+            std.log.warn("Got more than one latitude, overwriting {d} with {d}", .{ prev, lat });
+        }
+
+        self.latitude = lat;
+        return;
+    }
+
+    if (std.mem.eql(u8, "--lon", arg) or std.mem.eql(u8, "--longitude", arg)) {
+        const next = args.next() orelse {
+            std.log.err("{s} option requires a value", .{arg});
+            return ParseArgsError.MissingValue;
+        };
+
+        const lon = parseSuffixedLongitude(next) orelse std.fmt.parseFloat(f64, next) catch {
+            return ParseArgsError.InvalidLongitudeFormat;
+        };
+
+        if (self.longitude) |prev| {
+            std.log.warn("Got more than one latitude, overwriting {d} with {d}", .{ prev, lon });
+        }
+
+        self.longitude = lon;
+        return;
+    }
+
     if (parseSuffixedLatitude(arg)) |lat| {
+        if (self.latitude) |prev| {
+            std.log.warn("Got more than one latitude, overwriting {d} with {d}", .{ prev, lat });
+        }
+
         self.latitude = lat;
         return;
     }
 
     if (parseSuffixedLongitude(arg)) |lon| {
+        if (self.longitude) |prev| {
+            std.log.warn("Got more than one longitude, overwriting {d} with {d}", .{ prev, lon });
+        }
+
         self.longitude = lon;
         return;
     }
@@ -240,8 +287,8 @@ pub fn toC(self: *const @This()) c.runStruct {
     var target_time: c.time_t = self.target_time orelse now;
 
     return c.runStruct{
-        .latitude = self.latitude,
-        .longitude = self.longitude,
+        .latitude = self.latitude orelse c.DEFAULT_LATITUDE,
+        .longitude = self.longitude orelse c.DEFAULT_LONGITUDE,
         .offsetHour = self.offset_hour,
         .twilightAngle = self.twilight_angle,
         .nowTimet = now,
