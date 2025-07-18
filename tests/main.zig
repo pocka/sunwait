@@ -18,6 +18,7 @@
 comptime {
     _ = @import("./report.zig");
     _ = @import("./poll.zig");
+    _ = @import("./list.zig");
     _ = @import("./help.zig");
     _ = @import("./version.zig");
 }

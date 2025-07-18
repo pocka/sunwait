@@ -29,9 +29,8 @@ twilight_angle: f64 = c.TWILIGHT_ANGLE_DAYLIGHT,
 target_time: ?c.time_t = null,
 utc: bool = false,
 debug: bool = false,
-report_sunrise: c.OnOff = c.ONOFF_OFF,
-report_sunset: c.OnOff = c.ONOFF_OFF,
-list_days: c_uint = c.DEFAULT_LIST,
+report_sunrise: c.OnOff = c.ONOFF_ON,
+report_sunset: c.OnOff = c.ONOFF_ON,
 utc_bias_hours: f64 = 0,
 command: CommandOptions = .poll,
 
@@ -43,12 +42,13 @@ pub const ParseArgsError = error{
 };
 
 pub const ListOptions = struct {
-    days: c_uint = 1,
+    days: c_uint = c.DEFAULT_LIST,
 
-    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
-        _ = self;
-        _ = arg;
-        _ = args;
+    pub fn parseArg(self: *@This(), arg: []const u8, _: *std.process.ArgIterator) ParseArgsError!void {
+        if (std.fmt.parseUnsigned(c_uint, arg, 10)) |days| {
+            self.days = days;
+            return;
+        } else |_| {}
 
         return ParseArgsError.UnknownArg;
     }
@@ -315,7 +315,10 @@ pub fn toC(self: *const @This()) c.runStruct {
         .debug = if (self.debug) c.ONOFF_ON else c.ONOFF_OFF,
         .reportSunrise = self.report_sunrise,
         .reportSunset = self.report_sunset,
-        .listDays = self.list_days,
+        .listDays = switch (self.command) {
+            .list => |opts| opts.days,
+            else => c.DEFAULT_LIST,
+        },
         .utcBiasHours = self.utc_bias_hours,
     };
 }

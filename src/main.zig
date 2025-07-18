@@ -157,10 +157,11 @@ pub fn main() u8 {
                 },
             }
         },
-        .list => |command_opts| {
-            _ = command_opts;
-            std.log.err("list command is not implemented", .{});
-            return ExitCode.generic_error.code();
+        .list => |_| {
+            var c_opts = opts.toC();
+
+            c.print_list(&c_opts);
+            return ExitCode.ok.code();
         },
         .report => {
             std.log.err("report command is not implemented", .{});
