@@ -246,6 +246,10 @@ fn parseSuffixedLatitude(x: []const u8) ?f64 {
     const lastChar = x[x.len - 1];
     const value = std.fmt.parseFloat(f64, x[0 .. x.len - 1]) catch return null;
 
+    if (value < 0) {
+        return null;
+    }
+
     return switch (lastChar) {
         'N' => value,
         'S' => -value,
@@ -257,6 +261,7 @@ test parseSuffixedLatitude {
     try std.testing.expectEqual(29.977435, parseSuffixedLatitude("29.977435N"));
     try std.testing.expectEqual(-29.977435, parseSuffixedLatitude("29.977435S"));
     try std.testing.expectEqual(null, parseSuffixedLatitude("29.977435W"));
+    try std.testing.expectEqual(null, parseSuffixedLatitude("-29.977435N"));
 }
 
 fn parseSuffixedLongitude(x: []const u8) ?f64 {
@@ -266,6 +271,10 @@ fn parseSuffixedLongitude(x: []const u8) ?f64 {
 
     const lastChar = x[x.len - 1];
     const value = std.fmt.parseFloat(f64, x[0 .. x.len - 1]) catch return null;
+
+    if (value < 0) {
+        return null;
+    }
 
     return switch (lastChar) {
         'E' => value,
@@ -278,6 +287,7 @@ test parseSuffixedLongitude {
     try std.testing.expectEqual(31.132484, parseSuffixedLongitude("31.132484E"));
     try std.testing.expectEqual(-31.132484, parseSuffixedLongitude("31.132484W"));
     try std.testing.expectEqual(null, parseSuffixedLongitude("31.132484N"));
+    try std.testing.expectEqual(null, parseSuffixedLongitude("-31.132484E"));
 }
 
 pub fn toC(self: *const @This()) c.runStruct {
