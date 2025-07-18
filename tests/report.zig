@@ -128,8 +128,30 @@ test "Should behave same with date parameter" {
     defer std.testing.allocator.free(new.stderr);
     defer std.testing.allocator.free(new.stdout);
 
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same with date parameter, in non-UTC timezone" {
+    const legacy = try report(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .dates = &.{ "d", "28", "m", "2", "y", "1" },
+        .tz = "Asia/Tokyo",
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try report(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .dates = &.{ "d", "28", "m", "2", "y", "1" },
+        .tz = "Asia/Tokyo",
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
     return error.SkipZigTest;
-    // TODO: Uncomment below once new binary accepts date args
+    // TODO: Uncomment below once tz offset is handled
     // try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
     // try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
     // try std.testing.expectEqualStrings(legacy.stdout, new.stdout);

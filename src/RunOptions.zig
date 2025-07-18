@@ -26,7 +26,6 @@ latitude: ?f64 = null,
 longitude: ?f64 = null,
 offset_hour: f64 = 0,
 twilight_angle: f64 = c.TWILIGHT_ANGLE_DAYLIGHT,
-target_time: ?c.time_t = null,
 utc: bool = false,
 debug: bool = false,
 report_sunrise: c.OnOff = c.ONOFF_ON,
@@ -39,6 +38,81 @@ pub const ParseArgsError = error{
     MissingValue,
     InvalidLatitudeFormat,
     InvalidLongitudeFormat,
+    InvalidDayOfMonth,
+    InvalidMonth,
+    InvalidYearSince2000,
+};
+
+pub const ReportOptions = struct {
+    day_of_month: ?u5 = null,
+    month: ?u4 = null,
+    year_since_2000: ?c_int = null,
+
+    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+        if (std.mem.eql(u8, "d", arg)) {
+            const next = args.next() orelse {
+                std.log.err("{s} option requires a value", .{arg});
+                return ParseArgsError.MissingValue;
+            };
+
+            const d = std.fmt.parseUnsigned(u5, next, 10) catch {
+                std.log.err("Value of {s} option must be unsigned integer between 1 and 31", .{arg});
+                return ParseArgsError.InvalidDayOfMonth;
+            };
+
+            if (d == 0 or d > 31) {
+                std.log.err("Value of {s} option must be between 1 and 31", .{arg});
+                return ParseArgsError.InvalidDayOfMonth;
+            }
+
+            self.day_of_month = d;
+            return;
+        }
+
+        if (std.mem.eql(u8, "m", arg)) {
+            const next = args.next() orelse {
+                std.log.err("{s} option requires a value", .{arg});
+                return ParseArgsError.MissingValue;
+            };
+
+            const m = std.fmt.parseUnsigned(u4, next, 10) catch {
+                std.log.err("Value of {s} option must be unsigned integer between 1 and 12", .{arg});
+                return ParseArgsError.InvalidMonth;
+            };
+
+            if (m == 0 or m > 12) {
+                std.log.err("Value of {s} option must be between 1 and 12", .{arg});
+                return ParseArgsError.InvalidMonth;
+            }
+
+            self.month = m;
+            return;
+        }
+
+        if (std.mem.eql(u8, "y", arg)) {
+            const next = args.next() orelse {
+                std.log.err("{s} option requires a value", .{arg});
+                return ParseArgsError.MissingValue;
+            };
+
+            const y = std.fmt.parseUnsigned(c_int, next, 10) catch {
+                std.log.err("Value of {s} option must be integer", .{arg});
+                return ParseArgsError.InvalidYearSince2000;
+            };
+
+            // Although the original program accepts 0 for year, it will crash because
+            // some place produce NaN (division? idk) and attempt int cast (`(int) NaN`).
+            if (y == 0) {
+                std.log.err("Value of {s} option must be greater than 0", .{arg});
+                return ParseArgsError.InvalidYearSince2000;
+            }
+
+            self.year_since_2000 = y;
+            return;
+        }
+
+        return ParseArgsError.UnknownArg;
+    }
 };
 
 pub const ListOptions = struct {
@@ -81,7 +155,7 @@ pub const CommandOptions = union(Command) {
     help: void,
     version: void,
     poll: void,
-    report: void,
+    report: ReportOptions,
     wait: void,
     list: ListOptions,
 
@@ -90,7 +164,7 @@ pub const CommandOptions = union(Command) {
             .help => return ParseArgsError.UnknownArg,
             .version => return ParseArgsError.UnknownArg,
             .poll => return ParseArgsError.UnknownArg,
-            .report => return ParseArgsError.UnknownArg,
+            .report => try self.report.parseArg(arg, args),
             .wait => return ParseArgsError.UnknownArg,
             .list => try self.list.parseArg(arg, args),
         }
@@ -120,7 +194,7 @@ pub fn parseArgs(self: *@This(), args: *std.process.ArgIterator) ParseArgsError!
                             self.command = .poll;
                         },
                         .report => {
-                            self.command = .report;
+                            self.command = .{ .report = .{} };
                         },
                         .wait => {
                             self.command = .wait;
@@ -297,21 +371,39 @@ test parseSuffixedLongitude {
     try std.testing.expectEqual(null, parseSuffixedLongitude("-31.132484E"));
 }
 
-fn startOfTheDay(time: c.time_t, is_utc: bool) c.time_t {
+const GetTargetDayOptions = struct {
+    is_utc: bool = false,
+    day_of_month: ?c_int = null,
+    month: ?c_int = null,
+    year_since_2000: ?c_int = null,
+};
+
+fn getTargetDay(time: c.time_t, opts: GetTargetDayOptions) c.time_t {
     var tm: c.tm = undefined;
-    if (is_utc) {
+    if (opts.is_utc) {
         _ = c.gmtime_r(&time, &tm);
     } else {
         c.tzset();
         _ = c.localtime_r(&time, &tm);
     }
 
+    if (opts.year_since_2000) |y| {
+        // tm_year ... Year since 1900.
+        tm.tm_year = y + 100;
+    }
+
+    if (opts.month) |m| {
+        // tm_mon ... An index of English month notation, not regular month. [0, 11]
+        tm.tm_mon = m - 1;
+    }
+
+    if (opts.day_of_month) |d| {
+        tm.tm_mday = d;
+    }
+
     tm.tm_hour = 0;
     tm.tm_min = 0;
     tm.tm_sec = 0;
-
-    // Let `mktime` figure out whether DST or not.
-    tm.tm_isdst = -1;
 
     return c.timegm(&tm);
 }
@@ -320,7 +412,15 @@ pub fn toC(self: *const @This()) c.runStruct {
     var now: c.time_t = undefined;
     _ = c.time(&now);
 
-    var target_time: c.time_t = self.target_time orelse startOfTheDay(now, self.utc);
+    var target_time: c.time_t = switch (self.command) {
+        .report => |opts| getTargetDay(now, .{
+            .is_utc = self.utc,
+            .year_since_2000 = opts.year_since_2000,
+            .month = if (opts.month) |m| @intCast(m) else null,
+            .day_of_month = if (opts.day_of_month) |d| @intCast(d) else null,
+        }),
+        else => getTargetDay(now, .{ .is_utc = self.utc }),
+    };
 
     return c.runStruct{
         .latitude = self.latitude orelse c.DEFAULT_LATITUDE,
