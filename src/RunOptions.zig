@@ -237,7 +237,10 @@ fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) Par
 
     if (self.command.parseArg(arg, args)) |_| {
         return;
-    } else |_| {}
+    } else |err| switch (err) {
+        ParseArgsError.UnknownArg => {},
+        else => return err,
+    }
 
     if (std.mem.eql(u8, "--debug", arg)) {
         self.debug = true;
