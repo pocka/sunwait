@@ -175,6 +175,13 @@ fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) Par
         return;
     }
 
+    // For compatibility.
+    // TODO: Delete this once migration is complete.
+    if (std.mem.eql(u8, "utc", arg)) {
+        self.utc = true;
+        return;
+    }
+
     if (std.mem.eql(u8, "--gmt", arg)) {
         std.log.warn("--gmt is deprecated. Use --utc instead.", .{});
         self.utc = true;
