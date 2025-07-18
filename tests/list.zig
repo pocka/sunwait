@@ -26,6 +26,7 @@ const ListOptions = struct {
     latitude: []const u8 = "29.977435N",
     days: ?[]const u8 = "3",
     tz: []const u8 = "UTC",
+    event: ?enum { sunset, sunrise } = null,
 };
 
 fn list(allocator: std.mem.Allocator, opts: ListOptions) !std.process.Child.RunResult {
@@ -47,6 +48,10 @@ fn list(allocator: std.mem.Allocator, opts: ListOptions) !std.process.Child.RunR
     }
     try args.append(opts.latitude);
     try args.append(opts.longitude);
+
+    if (opts.event) |e| {
+        try args.append(@tagName(e));
+    }
 
     return try std.process.Child.run(.{
         .allocator = allocator,
@@ -122,6 +127,54 @@ test "Should behave same with UTC flag" {
         .bin = config.new_bin,
         .tz = "Europe/Paris",
         .utc = true,
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same on printing only sunrise" {
+    const legacy = try list(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .tz = "Europe/Paris",
+        .utc = true,
+        .event = .sunrise,
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try list(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .tz = "Europe/Paris",
+        .utc = true,
+        .event = .sunrise,
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same on printing only sunset" {
+    const legacy = try list(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .tz = "Europe/Paris",
+        .utc = true,
+        .event = .sunset,
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try list(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .tz = "Europe/Paris",
+        .utc = true,
+        .event = .sunset,
     });
     defer std.testing.allocator.free(new.stderr);
     defer std.testing.allocator.free(new.stdout);

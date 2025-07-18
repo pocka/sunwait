@@ -22,14 +22,78 @@ const c = @cImport({
     @cInclude("sunriset.h");
 });
 
+const sunrise_keywords: []const []const u8 = &.{
+    "sunrise",
+    "rise",
+    "dawn",
+    "sunup",
+    "up",
+};
+
+const sunset_keywords: []const []const u8 = &.{
+    "sunset",
+    "set",
+    "dusk",
+    "sundown",
+    "down",
+};
+
+const EventType = enum {
+    sunset,
+    sunrise,
+
+    // sunset and sunrise
+    both,
+
+    pub fn parseArg(current: ?@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!@This() {
+        // Compatibility
+        inline for (sunrise_keywords) |keyword| {
+            if (std.mem.eql(u8, keyword, arg)) {
+                return .sunrise;
+            }
+        }
+
+        // Compatibility
+        inline for (sunset_keywords) |keyword| {
+            if (std.mem.eql(u8, keyword, arg)) {
+                return .sunset;
+            }
+        }
+
+        if (std.mem.eql(u8, "--event", arg) or std.mem.eql(u8, "-e", arg)) {
+            const next = args.next() orelse {
+                std.log.err("{s} option requires a value", .{arg});
+                return ParseArgsError.MissingValue;
+            };
+
+            if (std.mem.eql(u8, "sunrise", next)) {
+                return if (current) |e| switch (e) {
+                    .sunset => .both,
+                    else => e,
+                } else .sunrise;
+            }
+
+            if (std.mem.eql(u8, "sunset", next)) {
+                return if (current) |e| switch (e) {
+                    .sunrise => .both,
+                    else => e,
+                } else .sunset;
+            }
+
+            std.log.err("Value of {s} must be either `sunrise` or `sunset`: got {s}", .{ arg, next });
+            return ParseArgsError.InvalidEventType;
+        }
+
+        return ParseArgsError.UnknownArg;
+    }
+};
+
 latitude: ?f64 = null,
 longitude: ?f64 = null,
 offset_hour: f64 = 0,
 twilight_angle: f64 = c.TWILIGHT_ANGLE_DAYLIGHT,
 utc: bool = false,
 debug: bool = false,
-report_sunrise: c.OnOff = c.ONOFF_ON,
-report_sunset: c.OnOff = c.ONOFF_ON,
 command: CommandOptions = .poll,
 
 pub const ParseArgsError = error{
@@ -40,6 +104,7 @@ pub const ParseArgsError = error{
     InvalidDayOfMonth,
     InvalidMonth,
     InvalidYearSince2000,
+    InvalidEventType,
 };
 
 pub const ReportOptions = struct {
@@ -115,9 +180,18 @@ pub const ReportOptions = struct {
 };
 
 pub const ListOptions = struct {
+    event_type: ?EventType = null,
     days: c_uint = c.DEFAULT_LIST,
 
-    pub fn parseArg(self: *@This(), arg: []const u8, _: *std.process.ArgIterator) ParseArgsError!void {
+    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+        if (EventType.parseArg(self.event_type, arg, args)) |e| {
+            self.event_type = e;
+            return;
+        } else |err| switch (err) {
+            ParseArgsError.UnknownArg => {},
+            else => return err,
+        }
+
         if (std.fmt.parseUnsigned(c_uint, arg, 10)) |days| {
             self.days = days;
             return;
@@ -424,6 +498,11 @@ pub fn toC(self: *const @This()) c.runStruct {
         else => getTargetDay(now, .{ .is_utc = self.utc }),
     };
 
+    const event_type: EventType = switch (self.command) {
+        .list => |opts| opts.event_type orelse .both,
+        else => .both,
+    };
+
     // This effectful function updates `c.timezone`.
     c.tzset();
 
@@ -444,8 +523,8 @@ pub fn toC(self: *const @This()) c.runStruct {
         .functionWait = c.ONOFF_OFF,
         .utc = if (self.utc) c.ONOFF_ON else c.ONOFF_OFF,
         .debug = if (self.debug) c.ONOFF_ON else c.ONOFF_OFF,
-        .reportSunrise = self.report_sunrise,
-        .reportSunset = self.report_sunset,
+        .reportSunrise = if (event_type == .sunset) c.ONOFF_OFF else c.ONOFF_ON,
+        .reportSunset = if (event_type == .sunrise) c.ONOFF_OFF else c.ONOFF_ON,
         .listDays = switch (self.command) {
             .list => |opts| opts.days,
             else => c.DEFAULT_LIST,

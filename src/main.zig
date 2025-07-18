@@ -68,6 +68,15 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\report   Prints sunrise and sunset times.
         \\list     List sunrise and sunset times for next <DAYS>.
         \\
+        \\[List Options]
+        \\-e <TYPE>, --event <TYPE>
+        \\                Events to print. Valid values are:
+        \\                * sunrise
+        \\                * sunset
+        \\                When this option is not set, sunwait targets both.
+        \\                You can specify this option multiple times to explicitly
+        \\                tell sunwait to target both.
+        \\
         \\[Common Parameters]
         \\TWILIGHT      Twilight type. Valid values are:
         \\              * daylight
@@ -75,8 +84,6 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\              * nautical
         \\              * astronomical
         \\              * angle <degree>
-        \\EVENT TYPE    Use "rise" for sunrise and "set" for sunset.
-        \\              If this parameter is not set, sunwait targets both.
         \\OFFSET        Time offset for sunrise and sunset time, towards noon.
         \\              Format must be "MM" (minutes) or "HH:MM".
         \\
