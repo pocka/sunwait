@@ -290,11 +290,30 @@ test parseSuffixedLongitude {
     try std.testing.expectEqual(null, parseSuffixedLongitude("-31.132484E"));
 }
 
+fn startOfTheDay(time: c.time_t, is_utc: bool) c.time_t {
+    var tm: c.tm = undefined;
+    if (is_utc) {
+        _ = c.gmtime_r(&time, &tm);
+    } else {
+        c.tzset();
+        _ = c.localtime_r(&time, &tm);
+    }
+
+    tm.tm_hour = 0;
+    tm.tm_min = 0;
+    tm.tm_sec = 0;
+
+    // Let `mktime` figure out whether DST or not.
+    tm.tm_isdst = -1;
+
+    return c.timegm(&tm);
+}
+
 pub fn toC(self: *const @This()) c.runStruct {
     var now: c.time_t = undefined;
     _ = c.time(&now);
 
-    var target_time: c.time_t = self.target_time orelse now;
+    var target_time: c.time_t = self.target_time orelse startOfTheDay(now, self.utc);
 
     return c.runStruct{
         .latitude = self.latitude orelse c.DEFAULT_LATITUDE,

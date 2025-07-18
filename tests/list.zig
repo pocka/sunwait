@@ -19,31 +19,92 @@ const std = @import("std");
 
 const config = @import("config");
 
-fn list(allocator: std.mem.Allocator, bin: []const u8) !std.process.Child.RunResult {
+const ListOptions = struct {
+    bin: []const u8,
+    utc: bool = false,
+    longitude: []const u8 = "31.132484E",
+    latitude: []const u8 = "29.977435N",
+    days: ?[]const u8 = "3",
+    tz: []const u8 = "UTC",
+};
+
+fn list(allocator: std.mem.Allocator, opts: ListOptions) !std.process.Child.RunResult {
     var env = std.process.EnvMap.init(allocator);
     defer env.deinit();
 
-    try env.put("TZ", "UTC");
+    try env.put("TZ", opts.tz);
+
+    var args = std.ArrayList([]const u8).init(allocator);
+    defer args.deinit();
+
+    try args.append(opts.bin);
+    if (opts.utc) {
+        try args.append("utc");
+    }
+    try args.append("list");
+    if (opts.days) |days| {
+        try args.append(days);
+    }
+    try args.append(opts.latitude);
+    try args.append(opts.longitude);
 
     return try std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &.{ bin, "list", "3", "29.977435N", "31.132484E" },
+        .argv = args.items,
         .env_map = &env,
     });
 }
 
 test {
-    const legacy = try list(std.testing.allocator, config.legacy_bin);
+    const legacy = try list(std.testing.allocator, .{ .bin = config.legacy_bin });
     defer std.testing.allocator.free(legacy.stderr);
     defer std.testing.allocator.free(legacy.stdout);
 
-    const new = try list(std.testing.allocator, config.new_bin);
+    const new = try list(std.testing.allocator, .{ .bin = config.new_bin });
     defer std.testing.allocator.free(new.stderr);
     defer std.testing.allocator.free(new.stdout);
 
     try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
-    return error.SkipZigTest;
-    // TODO: Uncomment these once correct handling of "target_time" is implemented.
-    // try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
-    // try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should have same default DAYS" {
+    const legacy = try list(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .days = null,
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try list(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .days = null,
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same on non-UTC timezone" {
+    const legacy = try list(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .tz = "Asia/Tokyo",
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try list(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .tz = "Asia/Tokyo",
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
 }
