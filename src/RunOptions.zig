@@ -421,17 +421,23 @@ pub fn parseArgs(self: *@This(), args: *std.process.ArgIterator) ParseArgsError!
                     continue :state .with_command;
                 } else |_| {}
 
-                self.parseArg(arg, args) catch |err| {
-                    std.log.err("Unknown argument: {s}", .{arg});
-                    return err;
+                self.parseArg(arg, args) catch |err| switch (err) {
+                    ParseArgsError.UnknownArg => {
+                        std.log.err("Unknown argument: {s}", .{arg});
+                        return err;
+                    },
+                    else => return err,
                 };
             }
         },
         .with_command => {
             while (args.next()) |arg| {
-                self.parseArg(arg, args) catch |err| {
-                    std.log.err("Unknown argument: {s}", .{arg});
-                    return err;
+                self.parseArg(arg, args) catch |err| switch (err) {
+                    ParseArgsError.UnknownArg => {
+                        std.log.err("Unknown argument: {s}", .{arg});
+                        return err;
+                    },
+                    else => return err,
                 };
             }
         },
