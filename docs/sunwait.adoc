@@ -83,7 +83,7 @@ If this option is not set, *sunwait* targets both.
 * *rise*   Sunrise, the Sun rose and the twilight starts.
 * *set*    Sunset, the Sun set past the twilight.
 
-_OFFSET_::
+*offset* _OFFSET_::
 Time offset to add to sunrise time and subtract from sunset time.
 This offset value shifts sunrise and sunset time towards noon by the specified amount.
 The value can be either of _MM_ (minutes) or _HH:MM_, and can have minus sign to represent negative amount.
