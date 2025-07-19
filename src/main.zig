@@ -62,6 +62,14 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\                <DEGREE> must be a floating point number or a positive
         \\                floating point number with E or W suffix.
         \\
+        \\--twilight <TYPE OR ANGLE>
+        \\                Specify twilight angle to determine day (twilight) or night.
+        \\                Value must be a floating point number or one of:
+        \\                * daylight
+        \\                * civil
+        \\                * nautical
+        \\                * astronomical
+        \\
         \\[Commands]
         \\poll     Prints whether it's DAY or NIGHT.
         \\wait     Sleep until sunrise and/or sunset, then exits.
@@ -78,12 +86,6 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\                tell sunwait to target both.
         \\
         \\[Common Parameters]
-        \\TWILIGHT      Twilight type. Valid values are:
-        \\              * daylight
-        \\              * civil
-        \\              * nautical
-        \\              * astronomical
-        \\              * angle <degree>
         \\OFFSET        Time offset for sunrise and sunset time, towards noon.
         \\              Format must be "MM" (minutes) or "HH:MM".
         \\

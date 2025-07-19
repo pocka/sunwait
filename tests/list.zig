@@ -27,6 +27,8 @@ const ListOptions = struct {
     days: ?[]const u8 = "3",
     tz: []const u8 = "UTC",
     event: ?enum { sunset, sunrise } = null,
+    twilight: ?[]const u8 = null,
+    twilight_angle: ?[]const u8 = null,
 };
 
 fn list(allocator: std.mem.Allocator, opts: ListOptions) !std.process.Child.RunResult {
@@ -51,6 +53,15 @@ fn list(allocator: std.mem.Allocator, opts: ListOptions) !std.process.Child.RunR
 
     if (opts.event) |e| {
         try args.append(@tagName(e));
+    }
+
+    if (opts.twilight) |t| {
+        try args.append(t);
+    }
+
+    if (opts.twilight_angle) |angle| {
+        try args.append("angle");
+        try args.append(angle);
     }
 
     return try std.process.Child.run(.{
@@ -175,6 +186,58 @@ test "Should behave same on printing only sunset" {
         .tz = "Europe/Paris",
         .utc = true,
         .event = .sunset,
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same even with twilight angle set" {
+    const legacy = try list(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .tz = "Europe/Paris",
+        .utc = true,
+        .event = .sunset,
+        .twilight = "civil",
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try list(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .tz = "Europe/Paris",
+        .utc = true,
+        .event = .sunset,
+        .twilight = "civil",
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "Should behave same on custom twilight angle" {
+    const legacy = try list(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .tz = "Europe/Paris",
+        .utc = true,
+        .event = .sunset,
+        .twilight_angle = "2.1",
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try list(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .tz = "Europe/Paris",
+        .utc = true,
+        .event = .sunset,
+        .twilight_angle = "2.1",
     });
     defer std.testing.allocator.free(new.stderr);
     defer std.testing.allocator.free(new.stdout);
