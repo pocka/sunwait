@@ -230,7 +230,7 @@ const TwilightAngle = union(enum) {
 
 latitude: ?f64 = null,
 longitude: ?f64 = null,
-offset_hour: f64 = 0,
+offset_mins: i32 = 0,
 twilight_angle: ?TwilightAngle = null,
 utc: bool = false,
 debug: bool = false,
@@ -246,6 +246,7 @@ pub const ParseArgsError = error{
     InvalidYearSince2000,
     InvalidEventType,
     InvalidAngle,
+    InvalidOffset,
 };
 
 pub const ReportOptions = struct {
@@ -554,6 +555,68 @@ fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) Par
         return;
     }
 
+    // Hyphen-less one is for compatibility.
+    // TODO: Delete the hyphen-less one once migration is completed.
+    if (std.mem.eql(u8, "-o", arg) or std.mem.eql(u8, "--offset", arg) or std.mem.eql(u8, "offset", arg)) {
+        const next = args.next() orelse {
+            std.log.err("{s} option requires a value", .{arg});
+            return ParseArgsError.MissingValue;
+        };
+
+        const i: u1, const modifier: i2 = sign: {
+            break :sign if (std.mem.startsWith(u8, next, "-")) .{
+                1, -1,
+            } else .{
+                0, 1,
+            };
+        };
+
+        if (std.mem.indexOfScalarPos(u8, next, i, ':')) |colon_pos| {
+            // HH:MM
+            const hrs = std.fmt.parseUnsigned(u7, next[i..colon_pos], 10) catch {
+                std.log.err("Hour part of {s} option must be valid integer between 0 and 99", .{arg});
+                return ParseArgsError.InvalidOffset;
+            };
+
+            if (hrs > 99) {
+                std.log.err("Hour part of {s} option must be between 0 and 99", .{arg});
+                return ParseArgsError.InvalidOffset;
+            }
+
+            if (next[i..].len == colon_pos + 1) {
+                std.log.err("Value of {s} option cannot end with colon", .{arg});
+                return ParseArgsError.InvalidOffset;
+            }
+
+            const mins = std.fmt.parseUnsigned(u6, next[colon_pos + 1 ..], 10) catch {
+                std.log.err("Minute part of {s} option must be valid integer between 0 and 59", .{arg});
+                return ParseArgsError.InvalidOffset;
+            };
+
+            if (mins > 59) {
+                std.log.err("Minute part of {s} option must be between 0 and 59", .{arg});
+                return ParseArgsError.InvalidOffset;
+            }
+
+            self.offset_mins = @as(i32, (@as(i32, hrs) * 60) + mins) * modifier;
+            return;
+        } else {
+            // MM
+            const parsed = std.fmt.parseUnsigned(u7, next[i..], 10) catch {
+                std.log.err("Value of {s} option must be valid integer between -99 and 99", .{arg});
+                return ParseArgsError.InvalidOffset;
+            };
+
+            if (parsed > 99) {
+                std.log.err("Value of {s} option must be between -99 and 99", .{arg});
+                return ParseArgsError.InvalidOffset;
+            }
+
+            self.offset_mins = @as(i32, parsed) * modifier;
+            return;
+        }
+    }
+
     return ParseArgsError.UnknownArg;
 }
 
@@ -673,7 +736,7 @@ pub fn toC(self: *const @This()) c.runStruct {
     return c.runStruct{
         .latitude = self.latitude orelse c.DEFAULT_LATITUDE,
         .longitude = self.longitude orelse c.DEFAULT_LONGITUDE,
-        .offsetHour = self.offset_hour,
+        .offsetHour = @as(f64, @floatFromInt(self.offset_mins)) / 60.0,
         .twilightAngle = twilight_angle.toFloat(),
         .nowTimet = now,
         .targetTimet = target_time,

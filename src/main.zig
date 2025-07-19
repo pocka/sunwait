@@ -69,6 +69,10 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\                * civil
         \\                * nautical
         \\                * astronomical
+        \\-o <DURATION>, --offset <DURATION>
+        \\                Time offset for sunrise and sunset time, towards noon.
+        \\                <DURATION> must be "MM" (minutes) or "HH:MM", and either
+        \\                can be negative.
         \\
         \\[Commands]
         \\poll     Prints whether it's DAY or NIGHT.
@@ -84,10 +88,6 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\                When this option is not set, sunwait targets both.
         \\                You can specify this option multiple times to explicitly
         \\                tell sunwait to target both.
-        \\
-        \\[Common Parameters]
-        \\OFFSET        Time offset for sunrise and sunset time, towards noon.
-        \\              Format must be "MM" (minutes) or "HH:MM".
         \\
         \\See man page for "sunwait(1)" for more.
         \\
