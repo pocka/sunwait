@@ -31,14 +31,22 @@ This repository contains [`flake.nix`](./flake.nix) file that builds and provide
 You need Zig compiler v0.14.x.
 
 ```sh
-zig build
+zig build -Dlegacy
 ```
 
 To build and run the built application in one go, use this command instead:
 
 ```sh
-zig build run
+zig build -Dlegacy run
 
 # To pass arguments to the program, set them after "--"
+zig build -Dlegacy run -- poll
+```
+
+To build new CLI, remove `-Dlegacy` option from the above.
+
+```sh
+zig build
+zig build run
 zig build run -- poll
 ```
