@@ -50,3 +50,13 @@ zig build
 zig build run
 zig build run -- poll
 ```
+
+To build and install man page as well, run `man` step or set `-Dman` option to the default build.
+
+```sh
+# Build and install man page
+zig build man
+
+# Build and install man page in addition to the application binary
+zig build -Dman
+```
