@@ -80,9 +80,9 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\report   Prints sunrise and sunset times.
         \\list     List sunrise and sunset times for next <DAYS>.
         \\
-        \\[List Options]
+        \\[Options for "list" and "wait"]
         \\-e <TYPE>, --event <TYPE>
-        \\                Events to print. Valid values are:
+        \\                Events to print or wait. Valid values are:
         \\                * sunrise
         \\                * sunset
         \\                When this option is not set, sunwait targets both.
@@ -179,8 +179,18 @@ pub fn main() u8 {
             return ExitCode.ok.code();
         },
         .wait => {
-            std.log.err("wait command is not implemented", .{});
-            return ExitCode.generic_error.code();
+            var c_opts = opts.toC();
+
+            const code = c.sunwait(&c_opts);
+
+            switch (code) {
+                c.EXIT_OK => return ExitCode.ok.code(),
+                c.EXIT_ERROR => return ExitCode.generic_error.code(),
+                else => {
+                    std.log.err("Unexpected exit code from sunwait(): {d}", .{code});
+                    return ExitCode.generic_error.code();
+                },
+            }
         },
     }
 }

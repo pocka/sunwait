@@ -321,6 +321,14 @@ pub const ReportOptions = struct {
     }
 };
 
+pub const WaitOptions = struct {
+    event_type: ?EventType = null,
+
+    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+        self.event_type = try EventType.parseArg(self.event_type, arg, args);
+    }
+};
+
 pub const ListOptions = struct {
     event_type: ?EventType = null,
     days: c_uint = c.DEFAULT_LIST,
@@ -371,7 +379,7 @@ pub const CommandOptions = union(Command) {
     version: void,
     poll: void,
     report: ReportOptions,
-    wait: void,
+    wait: WaitOptions,
     list: ListOptions,
 
     pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
@@ -380,7 +388,7 @@ pub const CommandOptions = union(Command) {
             .version => return ParseArgsError.UnknownArg,
             .poll => return ParseArgsError.UnknownArg,
             .report => try self.report.parseArg(arg, args),
-            .wait => return ParseArgsError.UnknownArg,
+            .wait => try self.wait.parseArg(arg, args),
             .list => try self.list.parseArg(arg, args),
         }
     }
@@ -412,7 +420,7 @@ pub fn parseArgs(self: *@This(), args: *std.process.ArgIterator) ParseArgsError!
                             self.command = .{ .report = .{} };
                         },
                         .wait => {
-                            self.command = .wait;
+                            self.command = .{ .wait = .{} };
                         },
                         .list => {
                             self.command = .{ .list = .{} };
@@ -725,6 +733,7 @@ pub fn toC(self: *const @This()) c.runStruct {
 
     const event_type: EventType = switch (self.command) {
         .list => |opts| opts.event_type orelse .both,
+        .wait => |opts| opts.event_type orelse .both,
         else => .both,
     };
 
