@@ -19,25 +19,51 @@ const std = @import("std");
 
 const config = @import("config");
 
-fn poll(allocator: std.mem.Allocator, bin: []const u8) !std.process.Child.RunResult {
+const PollOptions = struct {
+    bin: []const u8,
+    tz: []const u8 = "UTC",
+    twilight_angle: ?[]const u8 = null,
+    longitude: []const u8 = "31.132484E",
+    latitude: []const u8 = "29.977435N",
+};
+
+fn poll(allocator: std.mem.Allocator, opts: PollOptions) !std.process.Child.RunResult {
     var env = std.process.EnvMap.init(allocator);
     defer env.deinit();
 
-    try env.put("TZ", "UTC");
+    try env.put("TZ", opts.tz);
+
+    var args = std.ArrayList([]const u8).init(allocator);
+    defer args.deinit();
+
+    try args.append(opts.bin);
+    try args.append("poll");
+
+    if (opts.twilight_angle) |angle| {
+        try args.append("angle");
+        try args.append(angle);
+    }
+
+    try args.append(opts.latitude);
+    try args.append(opts.longitude);
 
     return try std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &.{ bin, "poll", "29.977435N", "31.132484E" },
+        .argv = args.items,
         .env_map = &env,
     });
 }
 
 test {
-    const legacy = try poll(std.testing.allocator, config.legacy_bin);
+    const legacy = try poll(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+    });
     defer std.testing.allocator.free(legacy.stderr);
     defer std.testing.allocator.free(legacy.stdout);
 
-    const new = try poll(std.testing.allocator, config.new_bin);
+    const new = try poll(std.testing.allocator, .{
+        .bin = config.new_bin,
+    });
     defer std.testing.allocator.free(new.stderr);
     defer std.testing.allocator.free(new.stdout);
 
@@ -47,7 +73,9 @@ test {
 }
 
 test {
-    const regular = try poll(std.testing.allocator, config.new_bin);
+    const regular = try poll(std.testing.allocator, .{
+        .bin = config.new_bin,
+    });
     defer std.testing.allocator.free(regular.stderr);
     defer std.testing.allocator.free(regular.stdout);
 
@@ -67,4 +95,31 @@ test {
     // Original sunwait prints debug log to stdout.
     // TODO: Print to stderr
     try std.testing.expect(debug.stdout.len > regular.stdout.len);
+}
+
+test "From original USAGE.txt: Example 3" {
+    // Indicate by program exit-code if is Day or Night using a custom twilight angle of
+    // 10 degrees above horizon. Washington, UK.
+    const legacy = try poll(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .twilight_angle = "10",
+        .latitude = "54.897786N",
+        // Original example uses -1.517536E but it does not make sense.
+        .longitude = "1.517536W",
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try poll(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .twilight_angle = "10",
+        .latitude = "54.897786N",
+        .longitude = "1.517536W",
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
 }

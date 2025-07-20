@@ -152,3 +152,29 @@ test "Should behave same with date parameter, in non-UTC timezone" {
     try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
     try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
 }
+
+test "From original USAGE.txt: Example 5" {
+    const legacy = try report(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .dates = &.{ "d", "15", "m", "3", "y", "20" },
+        .tz = "Asia/Taipei",
+        .latitude = "10.49S",
+        .longitude = "105.55E",
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try report(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .dates = &.{ "d", "15", "m", "3", "y", "20" },
+        .tz = "Asia/Taipei",
+        .latitude = "10.49S",
+        .longitude = "105.55E",
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}

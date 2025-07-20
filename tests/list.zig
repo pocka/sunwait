@@ -305,3 +305,62 @@ test "Should behave same with a negative offset" {
     try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
     try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
 }
+
+test "From original USAGE.txt: Example 2" {
+    // List civil sunrise and sunset times for today and next 6 days. Moscow.
+    const legacy = try list(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .tz = "Europe/Moscow",
+        .twilight = "civil",
+        .days = "7",
+        .latitude = "55.752163N",
+        .longitude = "37.617524E",
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try list(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .tz = "Europe/Moscow",
+        .twilight = "civil",
+        .days = "7",
+        .latitude = "55.752163N",
+        .longitude = "37.617524E",
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
+
+test "From original USAGE.txt: Example 4" {
+    // List next 7 days sunrise times, custom +3 degree twilight angle, default location.
+    // Uses GMT; as any change in daylight saving over the specified period is not considered.
+    const legacy = try list(std.testing.allocator, .{
+        .bin = config.legacy_bin,
+        .tz = "Asia/Tokyo",
+        .twilight_angle = "3",
+        .days = "7",
+        .event = .sunrise,
+        .utc = true,
+    });
+    defer std.testing.allocator.free(legacy.stderr);
+    defer std.testing.allocator.free(legacy.stdout);
+
+    const new = try list(std.testing.allocator, .{
+        .bin = config.new_bin,
+        .tz = "Asia/Tokyo",
+        .twilight_angle = "3",
+        .days = "7",
+        .event = .sunrise,
+        .utc = true,
+    });
+    defer std.testing.allocator.free(new.stderr);
+    defer std.testing.allocator.free(new.stdout);
+
+    try std.testing.expectEqual(legacy.term.Exited, new.term.Exited);
+    try std.testing.expectEqualStrings(legacy.stderr, new.stderr);
+    try std.testing.expectEqualStrings(legacy.stdout, new.stdout);
+}
