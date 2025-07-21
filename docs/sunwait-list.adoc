@@ -1,0 +1,69 @@
+// Copyright (C) 2025 Shota FUJI
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+= sunwait-list(1)
+:docdate: 2025-07-21
+:doctype: manpage
+:mansource: sunwait
+
+== Name
+
+sunwait-list - Lists sunset and sunrise time
+
+== Synposis
+
+*sunwait* *list* [_DAYS_] ++[++[-e | --event _<event>_]...]
+
+== Description
+
+This command prints a list of clock time when sunset and/or sunrise happens to stdout.
+
+== Options
+
+_DAYS_::
+Prints report for _DAYS_ days, including today.
+Defaults to *1* (only today).
+
+*-e* _<event>_, *--event* _<event>_::
+Prints sunrise or sunset only when set.
+If this option is not set, *sunwait* prints clock time of both, which is equivalent of,
+
++
+[,shell]
+----
+sunwait list -e sunrise -e sunset
+----
+
++
+which means "list sunrise time and sunset time".
+Valid values are:
+
+* *sunrise*   Prints sunrise time, when the Sun rose and the twilight starts.
+* *sunset*    Prints sunset time, when the Sun set past the twilight.
+
+== Examples
+
+List civil sunrise and sunset times for today and next 6 days in Moscow, Russia.
+
+[,shell]
+----
+sunwait list 7 --twilight civil --lat 55.752163N --lon 37.617524E
+----
+
+== See also
+
+*sunwait*(1)

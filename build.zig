@@ -43,29 +43,42 @@ pub fn build(b: *std.Build) void {
         step.dependOn(&run.step);
     }
 
-    const man = man: {
-        const cmd = b.addSystemCommand(&.{"asciidoctor"});
-
-        cmd.addArgs(&.{ "-b", "manpage" });
-        cmd.addFileArg(b.path("docs/sunwait.adoc"));
-        cmd.addArg("--out-file");
-        const out = cmd.addOutputFileArg("sunwait.1");
-
-        break :man b.addInstallFile(out, "share/man/man1/sunwait.1");
-    };
-
     // "zig build man"
-    {
+    const man = man: {
         const step = b.step("man", "Build man pages");
-        step.dependOn(&man.step);
-    }
+
+        const ManPage = struct {
+            source: std.Build.LazyPath,
+            outname: []const u8,
+        };
+
+        for ([_]ManPage{
+            .{ .source = b.path("docs/sunwait.adoc"), .outname = "sunwait.1" },
+            .{ .source = b.path("docs/sunwait-poll.adoc"), .outname = "sunwait-poll.1" },
+            .{ .source = b.path("docs/sunwait-wait.adoc"), .outname = "sunwait-wait.1" },
+            .{ .source = b.path("docs/sunwait-list.adoc"), .outname = "sunwait-list.1" },
+            .{ .source = b.path("docs/sunwait-report.adoc"), .outname = "sunwait-report.1" },
+        }) |page| {
+            const cmd = b.addSystemCommand(&.{"asciidoctor"});
+
+            cmd.addArgs(&.{ "-b", "manpage" });
+            cmd.addFileArg(page.source);
+            cmd.addArg("--out-file");
+            const out = cmd.addOutputFileArg(page.outname);
+
+            const install = b.addInstallFile(out, b.fmt("share/man/man1/{s}", .{page.outname}));
+            step.dependOn(&install.step);
+        }
+
+        break :man step;
+    };
 
     // "zig build"
     {
         b.installArtifact(exe);
 
         if (man_opt) {
-            b.getInstallStep().dependOn(&man.step);
+            b.getInstallStep().dependOn(man);
         }
     }
 

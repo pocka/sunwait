@@ -1,0 +1,55 @@
+// Copyright (C) 2025 Shota FUJI
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+= sunwait-poll(1)
+:docdate: 2025-07-20
+:doctype: manpage
+:mansource: sunwait
+
+== Name
+
+sunwait-poll - Prints whether it's day or night
+
+== Synposis
+
+*sunwait* *poll*
+
+== Description
+
+This command prints *DAY* or *NIGHT* depends on the current time and location, then exits with corresponding status.
+Unlike normal program, this program never exits with status *0*.
+
+== Exit status
+
+See *sunwait*(1) for error statuses.
+
+*2*    It's day or twilight.
+
+*3*    It' night (after twilight).
+
+== Examples
+
+Prints it's DAY or NIGHT at Giza Necropolis.
+
+[,shell]
+----
+sunwait poll --lat 29.977435N --lon 31.132484E
+----
+
+== See also
+
+*sunwait*(1)

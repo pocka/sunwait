@@ -1,0 +1,68 @@
+// Copyright (C) 2025 Shota FUJI
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+= sunwait-report(1)
+:docdate: 2025-07-21
+:doctype: manpage
+:mansource: sunwait
+
+== Name
+
+sunwait-report - Prints detailed report of sunrise and sunset times for the date
+
+== Synposis
+
+*sunwait* *report* [*y* _<years-since-2000>_] [*m* _<month>_] [*d* _<day-of-month>_]
+
+== Description
+
+This command prints detailed report on sunrise, sunset and other sun-related times for the date.
+It by default targets current date, but you can override year, month, and/or day of month individually.
+
+== Options
+
+*y* _<years-since-2000>_::
+Years since 2000. 0 to 99.
+Defaults to the current year - 2000.
+
+*m* _<month>_::
+Month. 1 to 12.
+Defaults to the current month.
+
+*d* _<day-of-month>_::
+Day of the month. 1 to 31.
+Defaults to the current date's day of the month.
+
+== Environment
+
+*TZ*::
+Generated report contains current timezone get by *localtime*(3) function, which refers to *TZ*.
+If this variable is set, its value takes precedence over the system configured timezone.
+See *tzset*(3) for timezone choosing algorithm.
+
+== Examples
+
+Produce a report of the different sunrises and sunsets on 2022/03/15 for Christmas Island, Australia.
+
+[,shell]
+----
+sunwait report y 20 m 3 d 15 --lat 10.49S --lon 105.55E
+----
+
+== See also
+
+*sunwait*(1)

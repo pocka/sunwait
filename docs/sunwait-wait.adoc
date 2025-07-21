@@ -1,0 +1,72 @@
+// Copyright (C) 2025 Shota FUJI
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+= sunwait-wait(1)
+:docdate: 2025-07-20
+:doctype: manpage
+:mansource: sunwait
+
+== Name
+
+sunwait-wait - Waits for sunrise and/or sunset
+
+== Synposis
+
+*sunwait* *wait* ++[++[-e | --event _<event>_]...]
+
+== Description
+
+This command sleeps until the next _event_ happens.
+
+== Options
+
+*-e* _<event>_, *--event* _<event>_::
+Targets sunrise or sunset when set.
+If this option is not set, *sunwait* targets both, which is equivalent of,
+
++
+[,shell]
+----
+sunwait wait -e sunrise -e sunset
+----
+
++
+which means "waits for next sunset or sunrise".
+Valid values are:
+
+* *sunrise*   Waits for sunrise, when the Sun rose and the twilight starts.
+* *sunset*    Waits for sunset, when the Sun set past the twilight.
+
+== Examples
+
+Waits for 10 minutes before sunset at Giza Necropolis.
+
+[,shell]
+----
+sunwait wait -e sunset -o 10 --lat 29.977435N --lon 31.132484E
+----
+
+Waits until 1 hour 15 minutes before the Sun rises in Greenwich, London.
+
+[,shell]
+----
+sunwait wait -e sunrise -o -1:15 --lat 51.477932N --lon 0.000000E
+----
+
+== See also
+
+*sunwait*(1)
