@@ -89,7 +89,7 @@ fn writeHelp(writer: anytype, bin: []const u8) !void {
         \\                You can specify this option multiple times to explicitly
         \\                tell sunwait to target both.
         \\
-        \\See man page for "sunwait(1)" for more.
+        \\See man page "sunwait(1)" for more.
         \\
     , .{bin});
 }
