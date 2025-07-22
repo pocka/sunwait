@@ -27,15 +27,22 @@ pub fn build(b: *std.Build) void {
     const exe = addExe(b, .{
         .target = target,
         .optimize = optimize,
-        .legacy = legacy,
+        .legacy = false,
         .version = version,
+    });
+
+    const legacy_exe = addExe(b, .{
+        .target = target,
+        .optimize = optimize,
+        .legacy = true,
+        .version = "0.91",
     });
 
     // "zig build run"
     {
         const step = b.step("run", "Build and run sunwait");
 
-        const run = b.addRunArtifact(exe);
+        const run = b.addRunArtifact(if (legacy) legacy_exe else exe);
         if (b.args) |args| {
             run.addArgs(args);
         }
@@ -75,16 +82,16 @@ pub fn build(b: *std.Build) void {
 
     // "zig build"
     {
-        b.installArtifact(exe);
+        b.installArtifact(if (legacy) legacy_exe else exe);
 
         if (man_opt) {
             b.getInstallStep().dependOn(man);
         }
     }
 
-    // "zig build test"
-    {
-        const step = b.step("test", "Run unit tests");
+    // "zig build unit-test"
+    const unit_tests = unit_tests: {
+        const step = b.step("unit-test", "Run unit tests");
 
         const t = b.addTest(.{
             .name = "unit_test",
@@ -106,40 +113,62 @@ pub fn build(b: *std.Build) void {
 
         const run = b.addRunArtifact(t);
         step.dependOn(&run.step);
-    }
 
-    // "zig build behavior_test"
-    {
-        const step = b.step("behavior_test", "Run behavior matching tests");
+        break :unit_tests step;
+    };
 
-        const legacy_exe = addExe(b, .{
-            .target = target,
-            .optimize = optimize,
-            .version = "0.91",
-            .legacy = true,
-        });
-
-        const new_exe = addExe(b, .{
-            .target = target,
-            .optimize = optimize,
-            .version = version,
-        });
+    // "zig build behavior-test"
+    const behavior_tests = behavior_tests: {
+        const step = b.step("behavior-test", "Run behavior matching tests");
 
         const t = b.addTest(.{
             .name = "behavior_matching_test",
             .target = target,
             .optimize = optimize,
-            .root_source_file = b.path("tests/main.zig"),
+            .root_source_file = b.path("tests/behavior_matching/main.zig"),
         });
 
         const config = b.addOptions();
         config.addOptionPath("legacy_bin", legacy_exe.getEmittedBin());
-        config.addOptionPath("new_bin", new_exe.getEmittedBin());
+        config.addOptionPath("new_bin", exe.getEmittedBin());
 
         t.root_module.addOptions("config", config);
 
         const run = b.addRunArtifact(t);
         step.dependOn(&run.step);
+
+        break :behavior_tests step;
+    };
+
+    // "zig build e2e-test"
+    const e2e_tests = e2e_tests: {
+        const step = b.step("e2e-test", "Run end-to-end tests");
+
+        const t = b.addTest(.{
+            .name = "e2e_test",
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("tests/e2e/main.zig"),
+        });
+
+        const config = b.addOptions();
+        config.addOptionPath("bin", exe.getEmittedBin());
+
+        t.root_module.addOptions("config", config);
+
+        const run = b.addRunArtifact(t);
+        step.dependOn(&run.step);
+
+        break :e2e_tests step;
+    };
+
+    // "zig build test"
+    {
+        const step = b.step("test", "Run all tests");
+
+        step.dependOn(unit_tests);
+        step.dependOn(behavior_tests);
+        step.dependOn(e2e_tests);
     }
 }
 

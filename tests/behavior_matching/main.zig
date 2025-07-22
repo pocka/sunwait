@@ -15,19 +15,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-only
 
-const std = @import("std");
-
-const config = @import("config");
-
-test {
-    const result = try std.process.Child.run(.{
-        .allocator = std.testing.allocator,
-        .argv = &.{ config.new_bin, "--help" },
-    });
-    defer std.testing.allocator.free(result.stderr);
-    defer std.testing.allocator.free(result.stdout);
-
-    try std.testing.expectEqual(0, result.term.Exited);
-    try std.testing.expectEqual(0, result.stderr.len);
-    try std.testing.expect(result.stdout.len > 0);
+comptime {
+    _ = @import("./report.zig");
+    _ = @import("./poll.zig");
+    _ = @import("./list.zig");
+    _ = @import("./version.zig");
 }
