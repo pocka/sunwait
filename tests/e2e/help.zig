@@ -31,3 +31,23 @@ test "should print to stdout" {
     try std.testing.expectEqual(0, result.stderr.len);
     try std.testing.expect(result.stdout.len > 0);
 }
+
+test "should print help to stderr on incorrect usage" {
+    const normal = try std.process.Child.run(.{
+        .allocator = std.testing.allocator,
+        .argv = &.{ config.bin, "--help" },
+    });
+    defer std.testing.allocator.free(normal.stderr);
+    defer std.testing.allocator.free(normal.stdout);
+
+    const incorrect_usage = try std.process.Child.run(.{
+        .allocator = std.testing.allocator,
+        .argv = &.{ config.bin, "--invalid-option" },
+    });
+    defer std.testing.allocator.free(incorrect_usage.stderr);
+    defer std.testing.allocator.free(incorrect_usage.stdout);
+
+    try std.testing.expectEqual(15, incorrect_usage.term.Exited);
+    try std.testing.expectStringEndsWith(incorrect_usage.stderr, normal.stdout);
+    try std.testing.expectEqualStrings("", incorrect_usage.stdout);
+}
