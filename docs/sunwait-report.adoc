@@ -26,26 +26,21 @@ sunwait-report - Prints detailed report of sunrise and sunset times for the date
 
 == Synposis
 
-*sunwait* *report* [*y* _<years-since-2000>_] [*m* _<month>_] [*d* _<day-of-month>_]
+*sunwait* *report* [*--date* _<YYYY-MM-DD>_]
 
 == Description
 
 This command prints detailed report on sunrise, sunset and other sun-related times for the date.
-It by default targets current date, but you can override year, month, and/or day of month individually.
 
 == Options
 
-*y* _<years-since-2000>_::
-Years since 2000. 0 to 99.
-Defaults to the current year - 2000.
+*--date* _<YYYY-MM-DD>_::
+Calendar date to generate report for.
+Defaults to the current date.
 
-*m* _<month>_::
-Month. 1 to 12.
-Defaults to the current month.
-
-*d* _<day-of-month>_::
-Day of the month. 1 to 31.
-Defaults to the current date's day of the month.
++
+Each component must be 0 padded.
+Missing a digit is a format error.
 
 == Environment
 
@@ -60,7 +55,7 @@ Produce a report of the different sunrises and sunsets on 2022/03/15 for Christm
 
 [,shell]
 ----
-sunwait report y 20 m 3 d 15 --lat 10.49S --lon 105.55E
+sunwait report --date 2022-03-15 --lat 10.49S --lon 105.55E
 ----
 
 == See also

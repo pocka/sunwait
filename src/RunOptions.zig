@@ -17,6 +17,7 @@
 
 const std = @import("std");
 
+const CalendarDate = @import("./RunOptions/date.zig").CalendarDate;
 const EventType = @import("./RunOptions/event.zig").EventType;
 const ParseArgsError = @import("./RunOptions/parser.zig").ParseArgsError;
 const TwilightAngle = @import("./RunOptions/twilight.zig").TwilightAngle;
@@ -40,6 +41,30 @@ pub const ReportOptions = struct {
     year_since_2000: ?c_int = null,
 
     pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+        if (std.mem.eql(u8, "--date", arg)) {
+            const next = args.next() orelse {
+                std.log.err("{s} option requires a value", .{arg});
+                return ParseArgsError.MissingValue;
+            };
+
+            const date = CalendarDate.fromString(next) catch |err| {
+                std.log.err("\"{s}\" is not a valid date string: {s}", .{ next, @errorName(err) });
+                return ParseArgsError.InvalidDateFormat;
+            };
+
+            self.year_since_2000 = @as(c_int, date.year) - 2000;
+            self.month = date.month;
+            self.day_of_month = date.day;
+            return;
+        }
+
+        if (CalendarDate.fromString(arg)) |date| {
+            self.year_since_2000 = @as(c_int, date.year) - 2000;
+            self.month = date.month;
+            self.day_of_month = date.day;
+            return;
+        } else |_| {}
+
         if (std.mem.eql(u8, "d", arg)) {
             const next = args.next() orelse {
                 std.log.err("{s} option requires a value", .{arg});
@@ -552,4 +577,8 @@ pub fn toC(self: *const @This()) c.runStruct {
         },
         .utcBiasHours = @as(f64, @floatFromInt(c.timezone)) / 60.0 / 60.0,
     };
+}
+
+test {
+    _ = @import("RunOptions/date.zig");
 }
