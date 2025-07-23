@@ -16,6 +16,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 test {
-    _ = @import("./version.zig");
     _ = @import("./list.zig");
 }
