@@ -26,12 +26,27 @@ sunwait-poll - Prints whether it's day or night
 
 == Synposis
 
-*sunwait* *poll*
+*sunwait* *poll* [*--at* _<YYYY-MM-DDThh:mm:ssZ>_]
 
 == Description
 
 This command prints *DAY* or *NIGHT* depends on the current time and location, then exits with corresponding status.
 Unlike normal program, this program never exits with status *0*.
+
+== Options
+
+*--at* _<YYYY-MM-DDThh:mm:ssZ>_::
+Datetime to check day or night.
+Defaults to the current time (system time).
+
++
+You can omit parts after _DD_ entirely, as in *YYYY-MM-DD*.
+In that case, time will be the start of the day.
+For example, *--at 2020-01-01* is equivalent of *--at 2020-01-01T00:00:00*.
+
++
+_Z_ is timezone offset notation in *hh*, *hh:mm*, or *Z* (UTC, means 00:00).
+When timezone offset is not set, sunwait uses local timezone offset unless *--utc* option is set.
 
 == Exit status
 
@@ -40,6 +55,13 @@ See *sunwait*(1) for error statuses.
 *2*    It's day or twilight.
 
 *3*    It' night (after twilight).
+
+== Environment
+
+*TZ*::
+Value of *--at* option without timezone part will use the current timezone get by *timezone*(3) function.
+If this variable is set, its value takes precedence over the system timezone.
+See *tzset*(3) for timezone choosing algorithm.
 
 == Examples
 

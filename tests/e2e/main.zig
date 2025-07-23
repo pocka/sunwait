@@ -17,4 +17,5 @@
 
 comptime {
     _ = @import("./help.zig");
+    _ = @import("./poll.zig");
 }

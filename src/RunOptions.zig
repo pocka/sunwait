@@ -17,7 +17,7 @@
 
 const std = @import("std");
 
-const CalendarDate = @import("./RunOptions/date.zig").CalendarDate;
+const datetime = @import("./RunOptions/datetime.zig");
 const EventType = @import("./RunOptions/event.zig").EventType;
 const ParseArgsError = @import("./RunOptions/parser.zig").ParseArgsError;
 const TwilightAngle = @import("./RunOptions/twilight.zig").TwilightAngle;
@@ -33,7 +33,30 @@ offset_mins: i32 = 0,
 twilight_angle: ?TwilightAngle = null,
 utc: bool = false,
 debug: bool = false,
-command: CommandOptions = .poll,
+command: CommandOptions = .{ .poll = .{} },
+
+const PollOptions = struct {
+    at: ?datetime.Datetime = null,
+
+    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+        if (std.mem.eql(u8, "--at", arg)) {
+            const next = args.next() orelse {
+                std.log.err("{s} option requires a value", .{arg});
+                return ParseArgsError.MissingValue;
+            };
+
+            const at = datetime.Datetime.fromString(next) catch |err| {
+                std.log.err("\"{s}\" is not a valid datetime string: {s}", .{ next, @errorName(err) });
+                return ParseArgsError.InvalidDatetimeFormat;
+            };
+
+            self.at = at;
+            return;
+        }
+
+        return ParseArgsError.UnknownArg;
+    }
+};
 
 pub const ReportOptions = struct {
     day_of_month: ?u5 = null,
@@ -47,7 +70,7 @@ pub const ReportOptions = struct {
                 return ParseArgsError.MissingValue;
             };
 
-            const date = CalendarDate.fromString(next) catch |err| {
+            const date = datetime.CalendarDate.fromString(next) catch |err| {
                 std.log.err("\"{s}\" is not a valid date string: {s}", .{ next, @errorName(err) });
                 return ParseArgsError.InvalidDateFormat;
             };
@@ -58,7 +81,7 @@ pub const ReportOptions = struct {
             return;
         }
 
-        if (CalendarDate.fromString(arg)) |date| {
+        if (datetime.CalendarDate.fromString(arg)) |date| {
             self.year_since_2000 = @as(c_int, date.year) - 2000;
             self.month = date.month;
             self.day_of_month = date.day;
@@ -142,7 +165,7 @@ pub const WaitOptions = struct {
 pub const ListOptions = struct {
     event_type: ?EventType = null,
     days: c_uint = c.DEFAULT_LIST,
-    from: ?CalendarDate = null,
+    from: ?datetime.CalendarDate = null,
 
     pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
         if (EventType.parseArg(self.event_type, arg, args)) |e| {
@@ -159,7 +182,7 @@ pub const ListOptions = struct {
                 return ParseArgsError.MissingValue;
             };
 
-            self.from = CalendarDate.fromString(next) catch |err| {
+            self.from = datetime.CalendarDate.fromString(next) catch |err| {
                 std.log.err("\"{s}\" is not a valid date string: {s}", .{ next, @errorName(err) });
                 return ParseArgsError.InvalidDateFormat;
             };
@@ -201,7 +224,7 @@ pub const Command = enum {
 pub const CommandOptions = union(Command) {
     help: void,
     version: void,
-    poll: void,
+    poll: PollOptions,
     report: ReportOptions,
     wait: WaitOptions,
     list: ListOptions,
@@ -210,7 +233,7 @@ pub const CommandOptions = union(Command) {
         switch (self.*) {
             .help => return ParseArgsError.UnknownArg,
             .version => return ParseArgsError.UnknownArg,
-            .poll => return ParseArgsError.UnknownArg,
+            .poll => try self.poll.parseArg(arg, args),
             .report => try self.report.parseArg(arg, args),
             .wait => try self.wait.parseArg(arg, args),
             .list => try self.list.parseArg(arg, args),
@@ -238,7 +261,7 @@ pub fn parseArgs(self: *@This(), args: *std.process.ArgIterator) ParseArgsError!
                             return;
                         },
                         .poll => {
-                            self.command = .poll;
+                            self.command = .{ .poll = .{} };
                         },
                         .report => {
                             self.command = .{ .report = .{} };
@@ -542,8 +565,34 @@ fn getTargetDay(time: c.time_t, opts: GetTargetDayOptions) c.time_t {
 }
 
 pub fn toC(self: *const @This()) c.runStruct {
-    var now: c.time_t = undefined;
-    switch (self.command) {
+    const now: c.time_t = now: switch (self.command) {
+        .poll => |opts| {
+            if (opts.at) |at| {
+                var tm: c.tm = .{
+                    .tm_year = at.date.year - 1900,
+                    .tm_mon = at.date.month - 1,
+                    .tm_mday = at.date.day,
+                    .tm_hour = at.time.hour,
+                    .tm_min = at.time.minute,
+                    .tm_sec = at.time.second,
+                };
+
+                var now = c.mktime(&tm);
+
+                if (at.offset) |offset| {
+                    now -= tm.tm_gmtoff;
+                    now += @as(c_long, if (offset.positive) 1 else -1) *
+                        (@as(c_long, offset.hour) * 60 + offset.minute) *
+                        std.time.s_per_min;
+                } else if (self.utc) {
+                    now -= tm.tm_gmtoff;
+                }
+
+                break :now now;
+            }
+
+            break :now c.time(null);
+        },
         .list => |opts| {
             if (opts.from) |from| {
                 var tm: c.tm = .{
@@ -552,15 +601,15 @@ pub fn toC(self: *const @This()) c.runStruct {
                     .tm_mday = from.day,
                 };
 
-                now = if (self.utc) c.timegm(&tm) else c.timelocal(&tm);
-            } else {
-                _ = c.time(&now);
+                break :now if (self.utc) c.timegm(&tm) else c.timelocal(&tm);
             }
+
+            break :now c.time(null);
         },
         else => {
-            _ = c.time(&now);
+            break :now c.time(null);
         },
-    }
+    };
 
     var target_time: c.time_t = switch (self.command) {
         .report => |opts| getTargetDay(now, .{
@@ -611,5 +660,5 @@ pub fn toC(self: *const @This()) c.runStruct {
 }
 
 test {
-    _ = @import("RunOptions/date.zig");
+    _ = @import("RunOptions/datetime.zig");
 }

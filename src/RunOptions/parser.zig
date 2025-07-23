@@ -27,4 +27,5 @@ pub const ParseArgsError = error{
     InvalidAngle,
     InvalidOffset,
     InvalidDateFormat,
+    InvalidDatetimeFormat,
 };
