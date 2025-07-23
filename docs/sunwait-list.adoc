@@ -26,7 +26,7 @@ sunwait-list - Lists sunset and sunrise time
 
 == Synposis
 
-*sunwait* *list* [_DAYS_] ++[++[-e | --event _<event>_]...]
+*sunwait* *list* [_DAYS_] [*--from* _<YYYY-MM-DD>_] ++[++[-e | --event _<event>_]...]
 
 == Description
 
@@ -34,8 +34,13 @@ This command prints a list of clock time when sunset and/or sunrise happens to s
 
 == Options
 
+*--from* _<YYYY-MM-DD>_::
+Calendar date list starts at.
+Defaults to today.
+
+
 _DAYS_::
-Prints report for _DAYS_ days, including today.
+Prints report for _DAYS_ days from *--from*, inclusive.
 Defaults to *1* (only today).
 
 *-e* _<event>_, *--event* _<event>_::

@@ -17,4 +17,5 @@
 
 test {
     _ = @import("./version.zig");
+    _ = @import("./list.zig");
 }

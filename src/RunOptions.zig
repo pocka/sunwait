@@ -142,6 +142,7 @@ pub const WaitOptions = struct {
 pub const ListOptions = struct {
     event_type: ?EventType = null,
     days: c_uint = c.DEFAULT_LIST,
+    from: ?CalendarDate = null,
 
     pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
         if (EventType.parseArg(self.event_type, arg, args)) |e| {
@@ -150,6 +151,19 @@ pub const ListOptions = struct {
         } else |err| switch (err) {
             ParseArgsError.UnknownArg => {},
             else => return err,
+        }
+
+        if (std.mem.eql(u8, "--from", arg)) {
+            const next = args.next() orelse {
+                std.log.err("{s} option requires a value", .{arg});
+                return ParseArgsError.MissingValue;
+            };
+
+            self.from = CalendarDate.fromString(next) catch |err| {
+                std.log.err("\"{s}\" is not a valid date string: {s}", .{ next, @errorName(err) });
+                return ParseArgsError.InvalidDateFormat;
+            };
+            return;
         }
 
         if (std.fmt.parseUnsigned(c_uint, arg, 10)) |days| {
@@ -529,7 +543,24 @@ fn getTargetDay(time: c.time_t, opts: GetTargetDayOptions) c.time_t {
 
 pub fn toC(self: *const @This()) c.runStruct {
     var now: c.time_t = undefined;
-    _ = c.time(&now);
+    switch (self.command) {
+        .list => |opts| {
+            if (opts.from) |from| {
+                var tm: c.tm = .{
+                    .tm_year = from.year - 1900,
+                    .tm_mon = from.month - 1,
+                    .tm_mday = from.day,
+                };
+
+                now = if (self.utc) c.timegm(&tm) else c.timelocal(&tm);
+            } else {
+                _ = c.time(&now);
+            }
+        },
+        else => {
+            _ = c.time(&now);
+        },
+    }
 
     var target_time: c.time_t = switch (self.command) {
         .report => |opts| getTargetDay(now, .{
