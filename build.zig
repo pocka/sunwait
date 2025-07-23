@@ -23,6 +23,7 @@ pub fn build(b: *std.Build) void {
     const man_opt = b.option(bool, "man", "Builds and installs man pages") orelse false;
     const legacy = b.option(bool, "legacy", "Build legacy C program") orelse false;
     const version = b.option([]const u8, "version", "Application version, without \"v\" prefix") orelse "dev";
+    const update_snapshot = b.option(bool, "update-snapshot", "Update snapshot on snapshot tests") orelse false;
 
     const exe = addExe(b, .{
         .target = target,
@@ -162,6 +163,30 @@ pub fn build(b: *std.Build) void {
         break :e2e_tests step;
     };
 
+    // "zig build snapshot-test"
+    const snapshot_tests = snapshot_test: {
+        const step = b.step("snapshot-test", "Run snapshot tests");
+
+        const t = b.addTest(.{
+            .name = "snapshot_test",
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("tests/snapshot/main.zig"),
+        });
+
+        const config = b.addOptions();
+        config.addOptionPath("bin", exe.getEmittedBin());
+        config.addOptionPath("test_src_root", b.path("tests/snapshot/"));
+        config.addOption(bool, "update_snapshot", update_snapshot);
+
+        t.root_module.addOptions("config", config);
+
+        const run = b.addRunArtifact(t);
+        step.dependOn(&run.step);
+
+        break :snapshot_test step;
+    };
+
     // "zig build test"
     {
         const step = b.step("test", "Run all tests");
@@ -169,6 +194,7 @@ pub fn build(b: *std.Build) void {
         step.dependOn(unit_tests);
         step.dependOn(behavior_tests);
         step.dependOn(e2e_tests);
+        step.dependOn(snapshot_tests);
     }
 }
 

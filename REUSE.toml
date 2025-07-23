@@ -20,3 +20,10 @@ SPDX-FileCopyrightText = [
 	"(c) 2000,2004,2022 Daniel Risacher",
 ]
 SPDX-License-Identifier = "GPL-3.0-only"
+
+[[annotations]]
+path = [
+	"tests/snapshot/**.txt",
+]
+SPDX-FileCopyrightText = "Copyright (C) 2025 Shota FUJI"
+SPDX-License-Identifier = "GPL-3.0-only"
