@@ -280,6 +280,8 @@ test "snapshots/list_default_location_7days.txt" {
             config.bin,
             "list",
             "7",
+            "--from",
+            "2025-01-01",
             "--utc",
             "-e",
             "sunrise",
