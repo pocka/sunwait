@@ -18,10 +18,13 @@
 const std = @import("std");
 
 const ArgIterator = @import("./RunOptions/ArgIterator.zig");
+const TestArgIterator = @import("./RunOptions/TestArgIterator.zig");
 const datetime = @import("./RunOptions/datetime.zig");
 const EventType = @import("./RunOptions/event.zig").EventType;
 const ParseArgsError = @import("./RunOptions/parser.zig").ParseArgsError;
 const TwilightAngle = @import("./RunOptions/twilight.zig").TwilightAngle;
+
+const RunOptions = @This();
 
 pub const ProcessArgIterator = @import("./RunOptions/ProcessArgIterator.zig");
 
@@ -321,6 +324,39 @@ pub fn parseArgs(self: *@This(), args: ArgIterator) ParseArgsError!void {
             }
         },
     }
+}
+
+test "help command aborts args parsing" {
+    var opts = RunOptions{};
+
+    var args = TestArgIterator.init(&.{ "--debug", "help", "--version", "--unknown-flag" });
+    const iter = args.iterator();
+
+    try opts.parseArgs(iter);
+
+    try std.testing.expect(opts.command == .help);
+}
+
+test "version command aborts args parsing" {
+    var opts = RunOptions{};
+
+    var args = TestArgIterator.init(&.{ "--debug", "version", "--help", "--unknown-flag" });
+    const iter = args.iterator();
+
+    try opts.parseArgs(iter);
+
+    try std.testing.expect(opts.command == .version);
+}
+
+test "defaults to poll" {
+    var opts = RunOptions{};
+
+    var args = TestArgIterator.init(&.{ "--at", "2020-01-01" });
+    const iter = args.iterator();
+
+    try opts.parseArgs(iter);
+
+    try std.testing.expect(opts.command.poll.at != null);
 }
 
 fn parseArg(self: *@This(), arg: []const u8, args: ArgIterator) ParseArgsError!void {
