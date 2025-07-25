@@ -59,6 +59,11 @@ const PollOptions = struct {
 };
 
 pub const ReportOptions = struct {
+    /// Current time should not affect report generation. However, as C function prints
+    /// the current time, this option is necessary for snapshot testing. Will be removed
+    /// once the report generation was replaced with Zig impelementation.
+    now: ?datetime.Datetime = null,
+
     day_of_month: ?u5 = null,
     month: ?u4 = null,
     year_since_2000: ?c_int = null,
@@ -147,6 +152,21 @@ pub const ReportOptions = struct {
             }
 
             self.year_since_2000 = y;
+            return;
+        }
+
+        if (std.mem.eql(u8, "--now", arg)) {
+            const next = args.next() orelse {
+                std.log.err("{s} option requires a value", .{arg});
+                return ParseArgsError.MissingValue;
+            };
+
+            const now = datetime.Datetime.fromString(next) catch |err| {
+                std.log.err("\"{s}\" is not a valid datetime string: {s}", .{ next, @errorName(err) });
+                return ParseArgsError.InvalidDatetimeFormat;
+            };
+
+            self.now = now;
             return;
         }
 
@@ -589,6 +609,35 @@ pub fn toC(self: *const @This()) c.runStruct {
                 }
 
                 break :now now;
+            }
+
+            break :now c.time(null);
+        },
+        // This block contains totally duplicated code of the above,
+        // because `now` option will be removed soon.
+        .report => |opts| {
+            if (opts.now) |now| {
+                var tm: c.tm = .{
+                    .tm_year = now.date.year - 1900,
+                    .tm_mon = now.date.month - 1,
+                    .tm_mday = now.date.day,
+                    .tm_hour = now.time.hour,
+                    .tm_min = now.time.minute,
+                    .tm_sec = now.time.second,
+                };
+
+                var t = c.mktime(&tm);
+
+                if (now.offset) |offset| {
+                    t -= tm.tm_gmtoff;
+                    t += @as(c_long, if (offset.positive) 1 else -1) *
+                        (@as(c_long, offset.hour) * 60 + offset.minute) *
+                        std.time.s_per_min;
+                } else if (self.utc) {
+                    t -= tm.tm_gmtoff;
+                }
+
+                break :now t;
             }
 
             break :now c.time(null);

@@ -18,4 +18,5 @@
 test {
     _ = @import("./list.zig");
     _ = @import("./poll.zig");
+    _ = @import("./report.zig");
 }

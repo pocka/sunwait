@@ -1,0 +1,26 @@
+
+      Current Date and Time: 07-Jul-2025 00:00 Asia
+
+
+Target Information ...
+
+                   Location:  29.977435N,  31.132484E
+                       Date: 01-Feb-2010
+                   Timezone: Asia
+   Sun directly north/south: 10:08
+             Twilight angle: -0.83 degrees (daylight)
+          Day with twilight: 04:45 to 15:32
+                      It is: Night
+
+General Information (no offset) ...
+
+ Times ...         Daylight: 04:45 to 15:32
+        with Civil twilight: 04:21 to 15:56
+     with Nautical twilight: 03:52 to 16:24
+ with Astronomical twilight: 03:24 to 16:53
+
+ Duration ...    Day length: 10:47 hours
+        with civil twilight: 11:34 hours
+     with nautical twilight: 12:32 hours
+ with astronomical twilight: 13:28 hours
+
