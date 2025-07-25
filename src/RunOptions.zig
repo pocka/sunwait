@@ -606,7 +606,7 @@ pub fn toC(self: *const @This()) c.runStruct {
             .list => |opts| opts.days,
             else => c.DEFAULT_LIST,
         },
-        .utcBiasHours = @as(f64, @floatFromInt(c.timezone)) / 60.0 / 60.0,
+        .utcBiasHours = @as(f64, @floatFromInt(-c.timezone)) / 60.0 / 60.0,
     };
 }
 
