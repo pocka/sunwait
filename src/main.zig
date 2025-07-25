@@ -102,17 +102,19 @@ pub fn main() u8 {
 
     var opts = RunOptions{};
 
-    var args = std.process.ArgIterator.initWithAllocator(allocator) catch {
+    var args = RunOptions.ProcessArgIterator.init(allocator) catch {
         return ExitCode.out_of_memory.code();
     };
     defer args.deinit();
 
-    const bin_name = args.next() orelse {
+    const iter = args.iterator();
+
+    const bin_name = iter.next() orelse {
         std.log.err("Got no arguments, exiting.", .{});
         return ExitCode.generic_error.code();
     };
 
-    opts.parseArgs(&args) catch {
+    opts.parseArgs(iter) catch {
         writeHelp(std.io.getStdErr().writer(), bin_name) catch |err| {
             std.log.err("Unable to write help message to stderr: {s}", .{@errorName(err)});
             return ExitCode.stdout_write_error.code();

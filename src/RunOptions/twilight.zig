@@ -17,6 +17,7 @@
 
 const std = @import("std");
 
+const ArgIterator = @import("./ArgIterator.zig");
 const ParseArgsError = @import("./parser.zig").ParseArgsError;
 
 const legacy_daylight_keywords: []const []const u8 = &.{
@@ -62,7 +63,7 @@ pub const TwilightAngle = union(enum) {
 
     const valueless_variants: []const TwilightAngle = &.{ .daylight, .civil, .nautical, .astronomical };
 
-    pub fn parseArg(arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!@This() {
+    pub fn parseArg(arg: []const u8, args: ArgIterator) ParseArgsError!@This() {
         inline for (legacy_daylight_keywords) |keyword| {
             if (std.mem.eql(u8, keyword, arg)) {
                 return .daylight;

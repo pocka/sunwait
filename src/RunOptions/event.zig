@@ -17,6 +17,7 @@
 
 const std = @import("std");
 
+const ArgIterator = @import("./ArgIterator.zig");
 const ParseArgsError = @import("./parser.zig").ParseArgsError;
 
 const sunrise_keywords: []const []const u8 = &.{
@@ -42,7 +43,7 @@ pub const EventType = enum {
     // sunset and sunrise
     both,
 
-    pub fn parseArg(current: ?@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!@This() {
+    pub fn parseArg(current: ?@This(), arg: []const u8, args: ArgIterator) ParseArgsError!@This() {
         // Compatibility
         inline for (sunrise_keywords) |keyword| {
             if (std.mem.eql(u8, keyword, arg)) {

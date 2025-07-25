@@ -17,10 +17,13 @@
 
 const std = @import("std");
 
+const ArgIterator = @import("./RunOptions/ArgIterator.zig");
 const datetime = @import("./RunOptions/datetime.zig");
 const EventType = @import("./RunOptions/event.zig").EventType;
 const ParseArgsError = @import("./RunOptions/parser.zig").ParseArgsError;
 const TwilightAngle = @import("./RunOptions/twilight.zig").TwilightAngle;
+
+pub const ProcessArgIterator = @import("./RunOptions/ProcessArgIterator.zig");
 
 const c = @cImport({
     @cInclude("time.h");
@@ -38,7 +41,7 @@ command: CommandOptions = .{ .poll = .{} },
 const PollOptions = struct {
     at: ?datetime.Datetime = null,
 
-    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+    pub fn parseArg(self: *@This(), arg: []const u8, args: ArgIterator) ParseArgsError!void {
         if (std.mem.eql(u8, "--at", arg)) {
             const next = args.next() orelse {
                 std.log.err("{s} option requires a value", .{arg});
@@ -68,7 +71,7 @@ pub const ReportOptions = struct {
     month: ?u4 = null,
     year_since_2000: ?c_int = null,
 
-    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+    pub fn parseArg(self: *@This(), arg: []const u8, args: ArgIterator) ParseArgsError!void {
         if (std.mem.eql(u8, "--date", arg)) {
             const next = args.next() orelse {
                 std.log.err("{s} option requires a value", .{arg});
@@ -177,7 +180,7 @@ pub const ReportOptions = struct {
 pub const WaitOptions = struct {
     event_type: ?EventType = null,
 
-    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+    pub fn parseArg(self: *@This(), arg: []const u8, args: ArgIterator) ParseArgsError!void {
         self.event_type = try EventType.parseArg(self.event_type, arg, args);
     }
 };
@@ -187,7 +190,7 @@ pub const ListOptions = struct {
     days: c_uint = c.DEFAULT_LIST,
     from: ?datetime.CalendarDate = null,
 
-    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+    pub fn parseArg(self: *@This(), arg: []const u8, args: ArgIterator) ParseArgsError!void {
         if (EventType.parseArg(self.event_type, arg, args)) |e| {
             self.event_type = e;
             return;
@@ -249,7 +252,7 @@ pub const CommandOptions = union(Command) {
     wait: WaitOptions,
     list: ListOptions,
 
-    pub fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+    pub fn parseArg(self: *@This(), arg: []const u8, args: ArgIterator) ParseArgsError!void {
         switch (self.*) {
             .help => return ParseArgsError.UnknownArg,
             .version => return ParseArgsError.UnknownArg,
@@ -266,7 +269,7 @@ const ParseState = enum {
     with_command,
 };
 
-pub fn parseArgs(self: *@This(), args: *std.process.ArgIterator) ParseArgsError!void {
+pub fn parseArgs(self: *@This(), args: ArgIterator) ParseArgsError!void {
     state: switch (ParseState.no_command) {
         .no_command => {
             while (args.next()) |arg| {
@@ -320,7 +323,7 @@ pub fn parseArgs(self: *@This(), args: *std.process.ArgIterator) ParseArgsError!
     }
 }
 
-fn parseArg(self: *@This(), arg: []const u8, args: *std.process.ArgIterator) ParseArgsError!void {
+fn parseArg(self: *@This(), arg: []const u8, args: ArgIterator) ParseArgsError!void {
     if (std.mem.eql(u8, "-v", arg) or std.mem.eql(u8, "--version", arg)) {
         self.command = .version;
         return;
@@ -710,4 +713,5 @@ pub fn toC(self: *const @This()) c.runStruct {
 
 test {
     _ = @import("RunOptions/datetime.zig");
+    _ = @import("RunOptions/TestArgIterator.zig");
 }
