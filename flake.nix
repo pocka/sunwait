@@ -40,9 +40,17 @@
           zig
           asciidoctor
         ];
+
+        buildInputs = with pkgs; [
+          # Database of current and historical time zones
+          # http://www.iana.org/time-zones
+          tzdata
+        ];
       in
       {
         packages.default = pkgs.stdenvNoCC.mkDerivation {
+          inherit buildInputs;
+
           pname = "sunwaitz";
           version = "0.91.0";
           src = ./.;
@@ -57,7 +65,7 @@
         };
 
         devShell = pkgs.mkShell {
-          inherit nativeBuildInputs;
+          inherit nativeBuildInputs buildInputs;
 
           packages = with pkgs; [
             # Code formatter
