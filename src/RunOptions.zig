@@ -15,6 +15,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-only
 
+const builtin = @import("builtin");
 const std = @import("std");
 
 const ArgIterator = @import("./RunOptions/ArgIterator.zig");
@@ -596,10 +597,18 @@ const GetTargetDayOptions = struct {
 fn getTargetDay(time: c.time_t, opts: GetTargetDayOptions) c.time_t {
     var tm: c.tm = undefined;
     if (opts.is_utc) {
-        _ = c.gmtime_r(&time, &tm);
+        if (builtin.os.tag == .windows) {
+            tm = c.gmtime(&time).*;
+        } else {
+            _ = c.gmtime_r(&time, &tm);
+        }
     } else {
-        c.tzset();
-        _ = c.localtime_r(&time, &tm);
+        if (builtin.os.tag == .windows) {
+            tm = c.localtime(&time).*;
+        } else {
+            c.tzset();
+            _ = c.localtime_r(&time, &tm);
+        }
     }
 
     if (opts.year_since_2000) |y| {
@@ -620,10 +629,33 @@ fn getTargetDay(time: c.time_t, opts: GetTargetDayOptions) c.time_t {
     tm.tm_min = 0;
     tm.tm_sec = 0;
 
-    return c.timegm(&tm);
+    return if (builtin.os.tag == .windows) c._mkgmtime(&tm) else c.timegm(&tm);
 }
 
 pub fn toC(self: *const @This()) c.runStruct {
+    const timezone: c_long = timezone: switch (builtin.os.tag) {
+        .windows => {
+            // This header file is available from newer Windows (probably 10?)
+            // and does not exist in old ones such as XP.
+            const win32 = @cImport({
+                @cInclude("timezoneapi.h");
+            });
+
+            var info: win32.DYNAMIC_TIME_ZONE_INFORMATION = undefined;
+            _ = win32.GetDynamicTimeZoneInformation(&info);
+
+            break :timezone info.Bias * -60;
+        },
+        else => {
+            c.tzset();
+            var now = c.time(null);
+            var tm: c.tm = undefined;
+            _ = c.localtime_r(&now, &tm);
+
+            break :timezone tm.tm_gmtoff;
+        },
+    };
+
     const now: c.time_t = now: switch (self.command) {
         .poll => |opts| {
             if (opts.at) |at| {
@@ -639,12 +671,12 @@ pub fn toC(self: *const @This()) c.runStruct {
                 var now = c.mktime(&tm);
 
                 if (at.offset) |offset| {
-                    now -= tm.tm_gmtoff;
+                    now -= timezone;
                     now += @as(c_long, if (offset.positive) 1 else -1) *
                         (@as(c_long, offset.hour) * 60 + offset.minute) *
                         std.time.s_per_min;
                 } else if (self.utc) {
-                    now -= tm.tm_gmtoff;
+                    now -= timezone;
                 }
 
                 break :now now;
@@ -668,12 +700,12 @@ pub fn toC(self: *const @This()) c.runStruct {
                 var t = c.mktime(&tm);
 
                 if (now.offset) |offset| {
-                    t -= tm.tm_gmtoff;
+                    t -= timezone;
                     t += @as(c_long, if (offset.positive) 1 else -1) *
                         (@as(c_long, offset.hour) * 60 + offset.minute) *
                         std.time.s_per_min;
                 } else if (self.utc) {
-                    t -= tm.tm_gmtoff;
+                    t -= timezone;
                 }
 
                 break :now t;
@@ -689,7 +721,11 @@ pub fn toC(self: *const @This()) c.runStruct {
                     .tm_mday = from.day,
                 };
 
-                break :now if (self.utc) c.timegm(&tm) else c.timelocal(&tm);
+                if (!self.utc) {
+                    break :now c.mktime(&tm);
+                }
+
+                break :now if (builtin.os.tag == .windows) c._mkgmtime(&tm) else c.timegm(&tm);
             }
 
             break :now c.time(null);
@@ -717,9 +753,6 @@ pub fn toC(self: *const @This()) c.runStruct {
 
     const twilight_angle = self.twilight_angle orelse .daylight;
 
-    // This effectful function updates `c.timezone`.
-    c.tzset();
-
     return c.runStruct{
         .latitude = self.latitude orelse c.DEFAULT_LATITUDE,
         .longitude = self.longitude orelse c.DEFAULT_LONGITUDE,
@@ -743,7 +776,7 @@ pub fn toC(self: *const @This()) c.runStruct {
             .list => |opts| opts.days,
             else => c.DEFAULT_LIST,
         },
-        .utcBiasHours = @as(f64, @floatFromInt(-c.timezone)) / 60.0 / 60.0,
+        .utcBiasHours = @as(f64, @floatFromInt(timezone)) / 60.0 / 60.0,
     };
 }
 

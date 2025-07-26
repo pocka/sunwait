@@ -80,6 +80,10 @@
             # https://github.com/fsfe/reuse-tool
             reuse
 
+            # Open Source implementation of the Windows API on top of X, OpenGL, and Unix
+            # https://www.winehq.org/
+            wineWowPackages.stable
+
             # For text editors, optional.
             # > ZLS is a non-official implementation of the Language Server Protocol for Zig
             # https://github.com/zigtools/zls

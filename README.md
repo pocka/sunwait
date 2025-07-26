@@ -60,3 +60,10 @@ zig build man
 # Build and install man page in addition to the application binary
 zig build -Dman
 ```
+
+## Development
+
+### Testing Windows build via Wine
+
+Add `-Dtarget=native-windows -fwine` options to build command.
+You need working Wine installation on your machine.
