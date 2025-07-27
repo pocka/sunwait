@@ -25,6 +25,8 @@ pub fn build(b: *std.Build) void {
     const version = b.option([]const u8, "version", "Application version, without \"v\" prefix") orelse "dev";
     const update_snapshot = b.option(bool, "update-snapshot", "Update snapshot on snapshot tests") orelse false;
 
+    const zsh_completion = b.option(bool, "zsh-completion", "Install Zsh completion file") orelse false;
+
     const exe = addExe(b, .{
         .target = target,
         .optimize = optimize,
@@ -83,10 +85,17 @@ pub fn build(b: *std.Build) void {
 
     // "zig build"
     {
+        const root_step = b.getInstallStep();
+
         b.installArtifact(if (legacy) legacy_exe else exe);
 
         if (man_opt) {
-            b.getInstallStep().dependOn(man);
+            root_step.dependOn(man);
+        }
+
+        if (zsh_completion) {
+            const install = b.addInstallFile(b.path("dist/completion.zsh"), "share/zsh/site-functions/_sunwait");
+            root_step.dependOn(&install.step);
         }
     }
 

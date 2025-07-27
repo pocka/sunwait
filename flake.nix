@@ -53,7 +53,12 @@
 
           pname = "sunwaitz";
           version = "0.91.0";
-          src = ./.;
+          src = pkgs.lib.sourceByRegex ./. [
+            "^src.*"
+            "^docs.*"
+            "^dist.*"
+            "build.zig"
+          ];
 
           meta = {
             mainProgram = "sunwait";
@@ -61,7 +66,46 @@
 
           nativeBuildInputs = nativeBuildInputs ++ [ pkgs.zig.hook ];
 
-          zigBuildFlags = [ "-Dman" ];
+          zigBuildFlags = [
+            "-Dman"
+            "-Dzsh-completion"
+          ];
+        };
+
+        apps = {
+          # $ nix run .#zsh
+          # Bare-bone Zsh session for testing completion
+          zsh =
+            let
+              sunwait = self.packages.${system}.default;
+
+              test-zsh = pkgs.symlinkJoin {
+                name = "sunwait-test-zsh";
+
+                nativeBuildInputs = [ pkgs.makeWrapper ];
+
+                paths = [
+                  pkgs.zsh
+                  self.packages.${system}.default
+                ];
+
+                postBuild = ''
+                  mkdir -p $out/share/$name
+                  echo 'fpath+=${sunwait}/share/zsh/site-functions' >> $out/share/$name/.zshrc
+                  echo 'autoload -U compinit && compinit' >> $out/share/$name/.zshrc
+                  chmod +x $out/share/$name/.zshrc
+
+                  wrapProgram $out/bin/zsh \
+                    --set ZDOTDIR $out/share/$name \
+                    --set MANPATH :${sunwait}/share/man \
+                    --prefix PATH : ${pkgs.lib.makeBinPath [ sunwait ]}
+                '';
+              };
+            in
+            {
+              type = "app";
+              program = "${test-zsh}/bin/zsh";
+            };
         };
 
         devShell = pkgs.mkShell {
