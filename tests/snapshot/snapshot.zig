@@ -67,15 +67,20 @@ pub fn expectMatchSnapshot(
         return err;
     };
 
-    if (!std.mem.eql(u8, current, run.stdout) and config.update_snapshot) {
+    const current_normalized = try std.mem.replaceOwned(u8, allocator, current, "\r\n", "\n");
+    allocator.free(current);
+
+    const actual_normalized = try std.mem.replaceOwned(u8, allocator, run.stdout, "\r\n", "\n");
+
+    if (!std.mem.eql(u8, current_normalized, actual_normalized) and config.update_snapshot) {
         std.debug.print("Writing snapshot to {s}\n", .{filename});
         try src_dir.writeFile(.{
-            .data = run.stdout,
+            .data = actual_normalized,
             .sub_path = filename,
         });
         return;
     }
 
     // Let std.testing print diffs
-    try std.testing.expectEqualStrings(current, run.stdout);
+    try std.testing.expectEqualStrings(current_normalized, actual_normalized);
 }
