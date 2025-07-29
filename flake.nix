@@ -69,44 +69,74 @@
           zigBuildFlags = [
             "-Dman"
             "-Dzsh-completion"
+            "-Dfish-completion"
           ];
         };
 
-        apps = {
-          # $ nix run .#zsh
-          # Bare-bone Zsh session for testing completion
-          zsh =
-            let
-              sunwait = self.packages.${system}.default;
+        apps =
+          let
+            sunwait = self.packages.${system}.default;
+          in
+          {
+            # $ nix run .#zsh
+            # Bare-bone Zsh session for testing completion
+            zsh =
+              let
+                test-zsh = pkgs.symlinkJoin {
+                  name = "sunwait-test-zsh";
 
-              test-zsh = pkgs.symlinkJoin {
-                name = "sunwait-test-zsh";
+                  nativeBuildInputs = [ pkgs.makeWrapper ];
 
-                nativeBuildInputs = [ pkgs.makeWrapper ];
+                  paths = [
+                    pkgs.zsh
+                    self.packages.${system}.default
+                  ];
 
-                paths = [
-                  pkgs.zsh
-                  self.packages.${system}.default
-                ];
+                  postBuild = ''
+                    mkdir -p $out/share/$name
+                    echo 'fpath+=${sunwait}/share/zsh/site-functions' >> $out/share/$name/.zshrc
+                    echo 'autoload -U compinit && compinit' >> $out/share/$name/.zshrc
+                    chmod +x $out/share/$name/.zshrc
 
-                postBuild = ''
-                  mkdir -p $out/share/$name
-                  echo 'fpath+=${sunwait}/share/zsh/site-functions' >> $out/share/$name/.zshrc
-                  echo 'autoload -U compinit && compinit' >> $out/share/$name/.zshrc
-                  chmod +x $out/share/$name/.zshrc
-
-                  wrapProgram $out/bin/zsh \
-                    --set ZDOTDIR $out/share/$name \
-                    --set MANPATH :${sunwait}/share/man \
-                    --prefix PATH : ${pkgs.lib.makeBinPath [ sunwait ]}
-                '';
+                    wrapProgram $out/bin/zsh \
+                      --set ZDOTDIR $out/share/$name \
+                      --set MANPATH :${sunwait}/share/man \
+                      --prefix PATH : ${pkgs.lib.makeBinPath [ sunwait ]}
+                  '';
+                };
+              in
+              {
+                type = "app";
+                program = "${test-zsh}/bin/zsh";
               };
-            in
-            {
-              type = "app";
-              program = "${test-zsh}/bin/zsh";
-            };
-        };
+
+            # $ nix run .#fish
+            # Fish session with completion configured
+            fish =
+              let
+                test-fish = pkgs.symlinkJoin {
+                  name = "sunwait-test-fish";
+
+                  nativeBuildInputs = [ pkgs.makeWrapper ];
+
+                  paths = [
+                    pkgs.fish
+                    self.packages.${system}.default
+                  ];
+
+                  postBuild = ''
+                    wrapProgram $out/bin/fish \
+                      --set MANPATH :${sunwait}/share/man \
+                      --prefix fish_complete_path : ${sunwait}/share/fish/vendor_completions.d \
+                      --prefix PATH : ${pkgs.lib.makeBinPath [ sunwait ]}
+                  '';
+                };
+              in
+              {
+                type = "app";
+                program = "${test-fish}/bin/fish";
+              };
+          };
 
         devShell = pkgs.mkShell {
           inherit nativeBuildInputs buildInputs;

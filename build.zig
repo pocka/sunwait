@@ -26,6 +26,7 @@ pub fn build(b: *std.Build) void {
     const update_snapshot = b.option(bool, "update-snapshot", "Update snapshot on snapshot tests") orelse false;
 
     const zsh_completion = b.option(bool, "zsh-completion", "Install Zsh completion file") orelse false;
+    const fish_completion = b.option(bool, "fish-completion", "Install fish shell completion file") orelse false;
 
     const exe = addExe(b, .{
         .target = target,
@@ -95,6 +96,14 @@ pub fn build(b: *std.Build) void {
 
         if (zsh_completion) {
             const install = b.addInstallFile(b.path("dist/completion.zsh"), "share/zsh/site-functions/_sunwait");
+            root_step.dependOn(&install.step);
+        }
+
+        if (fish_completion) {
+            const install = b.addInstallFile(
+                b.path("dist/completion.fish"),
+                "share/fish/vendor_completions.d/sunwait.fish",
+            );
             root_step.dependOn(&install.step);
         }
     }
