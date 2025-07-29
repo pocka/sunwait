@@ -70,6 +70,7 @@
             "-Dman"
             "-Dzsh-completion"
             "-Dfish-completion"
+            "-Dbash-completion"
           ];
         };
 
@@ -135,6 +136,41 @@
               {
                 type = "app";
                 program = "${test-fish}/bin/fish";
+              };
+
+            # $ nix run .#bash
+            # Bare-bone bash session for testing completion
+            bash =
+              let
+                test-bash = pkgs.symlinkJoin {
+                  name = "sunwait-test-bash";
+
+                  nativeBuildInputs = [ pkgs.makeWrapper ];
+
+                  paths = [
+                    pkgs.bash
+                    pkgs.bash-completion
+                    self.packages.${system}.default
+                  ];
+
+                  postBuild = ''
+                    mkdir -p $out/share/$name
+                    echo 'if ! shopt -oq posix; then' >> $out/share/$name/.bashrc
+                    echo '  source ${pkgs.bash-completion}/share/bash-completion/bash_completion' >> $out/share/$name/.bashrc
+                    echo 'fi' >> $out/share/$name/.bashrc
+                    chmod +x $out/share/$name/.bashrc
+
+                    wrapProgram $out/bin/bash \
+                      --set MANPATH :${sunwait}/share/man \
+                      --prefix PATH : ${pkgs.lib.makeBinPath [ sunwait ]} \
+                      --add-flags '--rcfile' \
+                      --add-flags $out/share/$name/.bashrc
+                  '';
+                };
+              in
+              {
+                type = "app";
+                program = "${test-bash}/bin/bash";
               };
           };
 
